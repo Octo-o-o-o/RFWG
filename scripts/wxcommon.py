@@ -125,3 +125,57 @@ def weekday_cn(datestr):
         return ['一', '二', '三', '四', '五', '六', '日'][datetime.date.fromisoformat(datestr).weekday()]
     except (ValueError, TypeError):
         return '?'
+
+
+IMG_RE = re.compile(r'^\[图片\]')
+
+
+def _dt(p):
+    import datetime
+    try:
+        return datetime.datetime.fromisoformat(p['date'] + ' ' + p['time'])
+    except Exception:
+        return None
+
+
+def group_consecutive(parsed, max_gap_min=2, max_block=12):
+    """把「同一发送者、在流中相邻、时间间隔≤max_gap_min 分钟」的消息合并成一个 block。
+    这样"文字 + 紧跟的图片"、以及一个人连发的几条会归成一条（更接近一次"发言轮次"）。
+    只在流中真正相邻时合并（中间插了别人就断开），并按 max_block 封顶避免超长块。
+    返回 block 列表：{sender,date,t_start,t_end,items:[原始 parsed dict,...]}。"""
+    blocks = []
+    cur = None
+    for p in parsed:
+        if (cur and p['sender'] == cur['sender'] and p['sender'] != '[系统]'
+                and len(cur['items']) < max_block):
+            t0, t1 = cur['_last'], _dt(p)
+            gap = abs((t1 - t0).total_seconds()) / 60 if (t0 and t1) else 999
+            if gap <= max_gap_min:
+                cur['items'].append(p)
+                cur['t_end'] = p['time']
+                cur['_last'] = t1 or t0
+                continue
+        if cur:
+            cur.pop('_last', None)
+            blocks.append(cur)
+        cur = {'sender': p['sender'], 'date': p['date'], 't_start': p['time'],
+               't_end': p['time'], 'items': [p], '_last': _dt(p)}
+    if cur:
+        cur.pop('_last', None)
+        blocks.append(cur)
+    return blocks
+
+
+def load_image_index(images_dir):
+    """读 images/_manifest.json，返回 {'YYYY-MM-DD HH:MM': [缩略图文件名,...]}，用于给 [图片] 贴图。"""
+    import json
+    import os
+    idx = {}
+    if not images_dir:
+        return idx
+    mf = os.path.join(images_dir, '_manifest.json')
+    if not os.path.exists(mf):
+        return idx
+    for m in json.load(open(mf, encoding='utf-8')):
+        idx.setdefault(m['time'], []).append(m['file'])
+    return idx
