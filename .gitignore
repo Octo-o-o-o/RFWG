@@ -1,0 +1,31 @@
+# ===== 隐私/密钥：绝不提交 =====
+all_keys.json
+config.json
+# 原始导出与中间产物（含聊天原文/朋友圈原文/绝对路径）
+raw*.json
+moments*.json
+keep.json
+# 所有解密出的数据库（含他人隐私）
+*.db
+*.decrypted.db
+# 报告类产物（含真名/引文/聊天逐字记录）
+0[0-9]-*.md
+*-完整消息.md
+*-精华.md
+*-发言精华.md
+*-朋友圈.md
+*-图片信息提取.md
+*-调研报告.html
+report*.html
+# 调研输出目录与图片/人物产物
+images/
+people/
+*-调研/
+_shots/
+full.png
+
+# ===== 常规 =====
+.DS_Store
+__pycache__/
+*.pyc
+.rfwg-venv/
