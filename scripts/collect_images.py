@@ -27,19 +27,7 @@ import hashlib
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from wxcommon import wechat_root  # noqa: E402
-
-
-def months_between(start, end):
-    out = []
-    y, m = start.year, start.month
-    while (y, m) <= (end.year, end.month):
-        out.append(f"{y:04d}-{m:02d}")
-        m += 1
-        if m > 12:
-            m = 1
-            y += 1
-    return out
+from wxcommon import wechat_root, make_sheets, months_between  # noqa: E402
 
 
 def main():
@@ -89,57 +77,6 @@ def main():
         print('未找到缩略图。可能：该会话该时间段无图片，或需先在微信里滚动加载过这些图片。')
         return
     make_sheets(a.out, manifest, a.sheet_cols, a.sheet_rows)
-
-
-def make_sheets(out, manifest, cols, rows):
-    try:
-        from PIL import Image, ImageDraw, ImageFont
-    except ImportError:
-        print('未安装 Pillow，跳过拼图。pip install --break-system-packages pillow 后重试。')
-        return
-    sd = os.path.join(out, '_sheets')
-    os.makedirs(sd, exist_ok=True)
-    TILE, PAD, PER = 380, 26, cols * rows
-    font = _font(18)
-    fonts = _font(15)
-
-    def tile(it):
-        cell = Image.new('RGB', (TILE, TILE + PAD), (245, 245, 245))
-        d = ImageDraw.Draw(cell)
-        try:
-            im = Image.open(os.path.join(out, it['file'])).convert('RGB')
-            im.thumbnail((TILE, TILE - PAD))
-            cell.paste(im, ((TILE - im.width) // 2, PAD + (TILE - PAD - im.height) // 2))
-        except Exception:
-            d.text((5, PAD + 5), 'ERR', fill=(200, 0, 0), font=font)
-        d.rectangle([0, 0, TILE, PAD], fill=(30, 30, 60))
-        d.text((5, 3), f"#{it['idx']} {it['time'][5:]}", fill=(255, 255, 255), font=fonts)
-        return cell
-
-    sheets = 0
-    for s in range(0, len(manifest), PER):
-        grp = manifest[s:s + PER]
-        W, H = cols * (TILE + 6), rows * (TILE + PAD + 6)
-        sheet = Image.new('RGB', (W, H), (255, 255, 255))
-        for i, it in enumerate(grp):
-            r, c = divmod(i, cols)
-            sheet.paste(tile(it), (c * (TILE + 6), r * (TILE + PAD + 6)))
-        sheets += 1
-        sheet.save(os.path.join(sd, f'sheet_{sheets:02d}.jpg'), quality=82)
-    print(f'made {sheets} index sheets -> {sd}')
-
-
-def _font(size):
-    from PIL import ImageFont
-    for p in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
-              '/System/Library/Fonts/PingFang.ttc',
-              '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
-        if os.path.exists(p):
-            try:
-                return ImageFont.truetype(p, size)
-            except Exception:
-                pass
-    return ImageFont.load_default()
 
 
 if __name__ == '__main__':

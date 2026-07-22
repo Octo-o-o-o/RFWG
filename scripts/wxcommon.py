@@ -179,3 +179,72 @@ def load_image_index(images_dir):
     for m in json.load(open(mf, encoding='utf-8')):
         idx.setdefault(m['time'], []).append(m['file'])
     return idx
+
+
+def months_between(start, end):
+    """返回 [start, end] 覆盖到的 'YYYY-MM' 月份列表（含端点），用于遍历缓存/附件按月分目录。"""
+    out = []
+    y, m = start.year, start.month
+    while (y, m) <= (end.year, end.month):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return out
+
+
+# ---- 索引拼图（收图 collect_images 与全量解图 decrypt_images_v2 共用）----
+def _font(size):
+    from PIL import ImageFont
+    for p in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+              '/System/Library/Fonts/PingFang.ttc',
+              '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
+        if os.path.exists(p):
+            try:
+                return ImageFont.truetype(p, size)
+            except Exception:
+                pass
+    return ImageFont.load_default()
+
+
+def make_sheets(out, manifest, cols=3, rows=4):
+    """把 out/ 下 manifest 里的图拼成带编号标签的索引大图，写到 out/_sheets/sheet_NN.jpg，便于 AI 逐张判读。
+    manifest 项形如 {'idx':int,'time':'YYYY-MM-DD HH:MM','file':'NNN_….jpg'}。缺 Pillow 时静默跳过。"""
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        print('未安装 Pillow，跳过拼图。pip install --break-system-packages pillow 后重试。')
+        return
+    if not manifest:
+        return
+    sd = os.path.join(out, '_sheets')
+    os.makedirs(sd, exist_ok=True)
+    TILE, PAD, PER = 380, 26, cols * rows
+    font = _font(18)
+    fonts = _font(15)
+
+    def tile(it):
+        cell = Image.new('RGB', (TILE, TILE + PAD), (245, 245, 245))
+        d = ImageDraw.Draw(cell)
+        try:
+            im = Image.open(os.path.join(out, it['file'])).convert('RGB')
+            im.thumbnail((TILE, TILE - PAD))
+            cell.paste(im, ((TILE - im.width) // 2, PAD + (TILE - PAD - im.height) // 2))
+        except Exception:
+            d.text((5, PAD + 5), 'ERR', fill=(200, 0, 0), font=font)
+        d.rectangle([0, 0, TILE, PAD], fill=(30, 30, 60))
+        d.text((5, 3), f"#{it['idx']} {it['time'][5:]}", fill=(255, 255, 255), font=fonts)
+        return cell
+
+    sheets = 0
+    for s in range(0, len(manifest), PER):
+        grp = manifest[s:s + PER]
+        W, H = cols * (TILE + 6), rows * (TILE + PAD + 6)
+        sheet = Image.new('RGB', (W, H), (255, 255, 255))
+        for i, it in enumerate(grp):
+            r, c = divmod(i, cols)
+            sheet.paste(tile(it), (c * (TILE + 6), r * (TILE + PAD + 6)))
+        sheets += 1
+        sheet.save(os.path.join(sd, f'sheet_{sheets:02d}.jpg'), quality=82)
+    print(f'made {sheets} index sheets -> {sd}')

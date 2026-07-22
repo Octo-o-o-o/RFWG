@@ -1,7 +1,8 @@
 ---
 name: RFWG
-description: Research From Wechat Group — 从指定的微信群 / 微信用户 / 主题做深度调研并生成报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖 XX"，或提到 wechat-cli、微信本地数据、朋友圈(sns.db)、群聊导出、聊天记录调研时使用。仅用于本机本人微信数据的离线分析。
+description: Research From Wechat Group — 从指定的微信群 / 微信用户 / 主题做深度调研并生成报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖 XX"，或提到 wechat-cli、微信本地数据、朋友圈(sns.db)、群聊导出、聊天记录调研时使用。调研包的收尾移交（数据完整性核验/导读/分享前对齐检查）与在既有调研包上组织多轮深化调研，也属本 skill 范围。仅用于本机本人微信数据的离线分析。
 license: MIT
+version: 1.1.0
 ---
 
 # RFWG · 从微信群做调研，生成报告
@@ -19,12 +20,15 @@ license: MIT
 ## 环境自检（第 0 步，必做）
 
 ```bash
-wechat-cli --version            # 没有则：npm i -g @canghe_ai/wechat-cli
-python3 -c "import Crypto,PIL"   # 缺则见下方依赖说明
+wechat-cli --version                 # 没有则：npm i -g @canghe_ai/wechat-cli && wechat-cli init
+python3 -c "import Crypto,PIL"        # 缺则：pip3 install -r "$RFWG/requirements.txt"（或加 --break-system-packages）
 ```
-- **`wechat-cli init`（首次）**：需微信已登录且正在运行；会走 `wxkey` 提取数据库密钥，过程可能弹一次 Mac 管理员密码/要求"完全磁盘访问"授权。成功后 `~/.wechat-cli/` 下应出现 `config.json` 与 `all_keys.json`。失败最常见原因：微信未登录、未授权磁盘访问、微信版本非 4.x。
-- **Python 依赖**：优先 `pip3 install --break-system-packages pycryptodome pillow`；若 pip 太老不认该参数，用虚拟环境：`python3 -m venv ~/.rfwg-venv && ~/.rfwg-venv/bin/pip install pycryptodome pillow`（后续用 `~/.rfwg-venv/bin/python3` 跑脚本）。
+- **完整安装/排障照抄 `references/toolchain-setup.md`**（工具来源、密钥落盘位置、故障表、已测/未测边界——AI 不必再自行调研）。
+- **`wechat-cli init`（首次）**：需微信已登录且正在运行；会提取**数据库密钥**，过程可能弹一次 Mac 管理员密码/要求"完全磁盘访问"授权。成功后 `~/.wechat-cli/` 下应出现 `config.json` 与 `all_keys.json`。失败最常见原因：微信未登录、未授权磁盘访问、微信版本非 4.x。
+- **要全量原图才需要的额外一步**：`all_keys.json` 无图片密钥；解 V2 原图前先装 `wxkey` 并 `wxkey bootstrap && wxkey image-key` 取 `image_key/image_xor_key`（见第 5 步与 toolchain-setup §2）。**只要文字/缩略图就不用装 wxkey。**
+- **Python 依赖**：`pip3 install -r "$RFWG/requirements.txt"`（`pycryptodome`+`pillow`）；pip 报 externally-managed 时加 `--break-system-packages`，或用虚拟环境 `python3 -m venv ~/.rfwg-venv`（后续用 `~/.rfwg-venv/bin/python3` 跑脚本）。
 - **浏览器验收**：指 AI 环境自带的浏览器工具（如 playwright MCP）；没有就走第 8 步的本机无头 Chrome 方案。
+- **仅 macOS + 微信 4.x**：Windows/Linux 未测（Windows 走向见 toolchain-setup §0）。
 
 数据结构与解密细节见 `references/wechat-local-data.md`（需要时再读）。
 
@@ -80,7 +84,18 @@ python3 "$RFWG/scripts/collect_images.py" --room "<username>" --out "$OUT/images
 python3 "$RFWG/scripts/sort_images.py" --images "$OUT/images" --keep "$OUT/keep.json"
 ```
 有用留 `images/`、无用移 `images/_archived/`（可逆），并生成 `images/_USEFUL.md`。把图里"文字没有的信息"写进 `04-图片信息提取.md`。
-> 若 `collect_images.py` 收不到图：可能该时段图片没被微信加载过缩略图，或需要 V2 原图——见 `scripts/decrypt_images_v2.py` 与 `references/wechat-local-data.md`（需图片密钥，进阶）。
+
+**5b. 要看「全部原图」（不止缩略图）→ 取图片密钥再解 V2 原图。** 缩略图只覆盖被微信加载过的一部分；要某群一段时间的**全部原图**：
+```bash
+wxkey bootstrap && wxkey image-key      # 一次性：装 wxkey 并取 image_key/image_xor_key（详见 toolchain-setup §2）
+python3 "$RFWG/scripts/decrypt_images_v2.py" --room "<username>" \
+    --start YYYY-MM-DD --end YYYY-MM-DD --out "$OUT/images_full"   # 自动从 wxkey config 读密钥；按 mtime 命名 + manifest + sheets
+```
+产出结构同上（`images_full/NNN_….jpg` + `_manifest.json` + `_sheets/`），照样 **读 sheets → 写 keep.json → `sort_images.py`** 判读分拣。
+- 先 `--dry-run` 看命中多少张、时间对不对（**不需要密钥**）；首次真解建议 `--limit 5` 抽验清晰度，再全量。
+- 有 `image_xor_key` 就让脚本用它（自动或 `--xor 0x37`），**不要暴力枚举**（更快更准）。`--variant orig/hd/thumb/all` 选原图/高清/缩略/全部。
+> 若 `collect_images.py` 收不到图：该时段图片没被微信加载过缩略图，或需走上面的 V2 原图。`--media` 解析图片路径有 bug，别用它映射（见 `references/wechat-local-data.md` §1）。
+> 用户**手工提供**的长截图（如别人整理的长图）：先用 Pillow 竖切成可读的段图逐段读，再写一份**全文转录 MD** 落盘——后续引用一律引转录文+段图号，不要反复读原图。
 
 ### 6. 朋友圈补充（若关注某人，且需要其朋友圈）
 ```bash
@@ -88,7 +103,13 @@ python3 "$RFWG/scripts/decrypt_moments.py" --user "<wxid>" --start YYYY-MM-DD --
     --out "$OUT/moments.json"
 ```
 解密 `sns.db` 取该用户朋友圈（文字 + 媒体清单），**用完自动删完整解密库**（含他人隐私）。据此写 `05-<对象>-朋友圈.md`。
-> 朋友圈配图同样是 V2 加密、CDN 多已过期；默认用**正文逐条描述 + 配图推断**还原，不强求像素。要像素才用 `decrypt_images_v2.py`（需 `wxkey image-key`）。
+
+**朋友圈配图（要像素时）**：CDN 链接多已过期，但本机 `cache/*/Sns/Img` 里有 V2 加密缓存，用同一图片密钥解：
+```bash
+python3 "$RFWG/scripts/decrypt_images_v2.py" --sns \
+    --start YYYY-MM-DD --end YYYY-MM-DD --out "$OUT/moments_img"    # 需先 wxkey image-key
+```
+> ⚠️ `Sns/Img` 是**全账号共享**缓存，会混入他人朋友圈配图。解出后**只保留目标对象的**（读 sheets → keep.json → `sort_images.py`），其余回档/删除，并守 §纪律 的第三方隐私红线。默认策略仍是**正文逐条描述 + 配图推断**，够用就不必解像素。
 
 ### 7. 综合成稿（MD 已边做边有，再出 HTML 终稿）
 - 通读 01–05 + `images/_USEFUL.md`，**从头把线索按时间戳串一遍**，做**交叉印证**（群聊 vs 朋友圈 vs 图片，注意谁更早/第一人称）。
@@ -116,6 +137,10 @@ python3 -m http.server 8899 --bind 127.0.0.1 -d "$OUT" >/dev/null 2>&1 &   # -d 
   ```
 - 发现溢出/SVG 越界/文字被裁/信息缺失 → 改 HTML → 重渲染，直到干净。
 
+### 9. 收尾移交（强烈建议，尤其要分享或后续深化时）
+
+再产出两份收尾件：**`00-数据完整性核验.md`**（哪些数据完整/哪些有缺口/时间戳精度/给后续深度调研会话的建议——后续任何会话以它判断数据边界）与 **`README-导读.md`**（怎么读/一句话结论/目录树/关键数字/给 AI 的入口建议/转发前留意）。模板要点、**多轮深化调研的组织约定**（过程报告编号、活文档 vs 过程文档、头部通告制、防复活清单、对抗评审工作法）与**分享前对齐检查清单**（计数/版本/指针/隐私再盘点）见 `references/handoff-deep-research.md`（收尾或包要长大时再读）。
+
 ## 纪律（重要）
 
 - **只处理本机、本人**微信数据，离线分析；遵守当地法律与微信用户协议，风险自负。
@@ -123,6 +148,8 @@ python3 -m http.server 8899 --bind 127.0.0.1 -d "$OUT" >/dev/null 2>&1 &   # -d 
 - **第三方隐私**：群友/被调研对象**未经同意**，其可识别个人信息（真实姓名、wxid、实名雇主、原文）**不得对外发布**；对外分发的报告默认**匿名化**（真名等只留本地私稿）。
 - **数据卫生**：完整解密的 `sns.db` 用完即删（脚本已用 try/finally 保证）；`raw.json`/`moments.json`/图片/各 MD/HTML 产物可能含隐私，放到 repo 之外的 `$OUT`，**绝不提交公开仓库**；`all_keys.json` 等密钥永不外泄。
 - **忠实**：区分信号与噪音；概念未经验证要写明"尚无公开代码/论文"这类边界；不夸大。
+- **抗错引**：报告会被其他 AI 读取并转述，实测错引全部朝转述者利己方向偏——事实结论必须带稳定锚点（时间戳+出处），下游（含自己）转述"报告说了什么"必须回原文核对；引用设计文档时显式区分"设计"与"已实现"。
+- **多会话卫生**：动笔前先 `ls -lat` 盘点输出目录，以目录状态为准（被打断的后台任务可能已落盘）；同一调研目录同一时间只允许一个会话收尾，发现并行写入先盘点消化再动笔。
 
 ## 产物清单（一次完整调研后 `$OUT/` 应有）
 
@@ -130,7 +157,12 @@ python3 -m http.server 8899 --bind 127.0.0.1 -d "$OUT" >/dev/null 2>&1 &   # -d 
 raw.json                      # 原始导出（勿公开）
 01-完整消息.md / 02-<主题>-精华.md
 03-<对象>-发言精华.md          # 人物提炼（可选）
-04-图片信息提取.md + images/   # 图库(有用) + _archived(回档) + _sheets + _USEFUL.md + _manifest.json
-05-<对象>-朋友圈.md + moments.json   # 朋友圈（可选）
+04-图片信息提取.md + images/   # 缩略图库 + _archived(回档) + _sheets + _USEFUL.md + _manifest.json
+images_full/                  # 全量原图（可选，wxkey image-key 后解，结构同 images/）
+05-<对象>-朋友圈.md + moments.json   # 朋友圈（可选）；moments_img/ = 朋友圈配图（可选，需图片密钥）
 <主题>-调研报告.html           # HTML 终稿（含 SVG，已浏览器验收）
+00-数据完整性核验.md           # 收尾件：数据边界清单（第 9 步）
+README-导读.md                # 收尾件：分享包入口（第 9 步）
 ```
+
+包继续长大（深化轮报告、外部语料库）时的目录与文档约定见 `references/handoff-deep-research.md`。

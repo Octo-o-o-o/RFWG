@@ -1,0 +1,8 @@
+# RFWG Python 依赖（macOS + WeChat 4.x）
+# 安装：pip3 install -r requirements.txt
+#   系统 pip 报 externally-managed 时：pip3 install --break-system-packages -r requirements.txt
+#   或用虚拟环境：python3 -m venv ~/.rfwg-venv && ~/.rfwg-venv/bin/pip install -r requirements.txt
+# 已在 Python 3.12 上验证。
+
+pycryptodome>=3.20,<4    # SQLCipher / V2 图片的 AES 解密
+pillow>=10,<13           # 图片索引拼图、报告全页截图切片、缩略图判读
