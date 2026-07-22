@@ -34,12 +34,17 @@ README-资料清单.md
 report.html
 report-*.html
 
-# ---- 调研输出目录与图片 / 人物产物（含【他人】原图与朋友圈配图）----
+# ---- 调研输出目录与图片 / 语音 / 人物产物（含【他人】原图、配图、语音）----
 images/
 images*/
 moments/
 moments_img/
 people/
+voices/
+voices*/
+voice_transcripts.md
+*.silk
+*.wav
 人物发言原文/
 原始数据/
 周度时间线/

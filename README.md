@@ -107,7 +107,17 @@ npm i -g @canghe_ai/wechat-cli && wechat-cli init
 
 > 例：“把群里的图片都取下来看看，长截图记得拆开读清楚；朋友圈配图也一起。”
 
-### 4. 全程持久化（边做边落盘，供后续分析与整理）
+### 4. 语音转写（微信语音 → 本地文字，完全离线）
+
+- 微信语音消息此前只是 `[语音]` 占位、内容全丢；本能力把它**转成带时间戳的文字**并入调研素材。
+- 微信语音是**明文 SILK v3**（无需任何密钥）：`transcribe_voice.py` 收集某群/某人一段时间的语音 → 本地解码 → **本地 faster-whisper 转写**成中文 → 输出带时间戳的 `voice_transcripts.md`。
+- **完全本地离线**：不调用任何云 ASR，音频与转写文本绝不外发；模型可预下载后 `--offline` 断网运行；中间音频转写后即删。可接受少量错字（对调研影响很小）。
+- 依赖为**可选**（`pip install -r requirements-voice.txt`），不装不影响其它功能。⚠️ 覆盖范围是“**被播放过**”的语音（微信只对播放过的语音落地明文缓存）。
+- 用到：`transcribe_voice.py`。
+
+> 例：“把群里的语音也转成文字一起分析。”
+
+### 5. 全程持久化（边做边落盘，供后续分析与整理）
 
 - 每一步产物都**落盘、带时间戳**：原始导出 `raw.json`、完整时间线与主题精华 MD、按人 MD、图片库 + `_manifest.json`、朋友圈 JSON、HTML 终稿。
 - 收尾再产出**数据完整性核验**与**导读**两份移交件，方便后续换个会话继续深化，或打包分享给别人（或别的 AI）做二次分析。
@@ -194,6 +204,7 @@ rfwg/
 ├── CONTRIBUTING.md / CODE_OF_CONDUCT.md / CHANGELOG.md
 ├── requirements.txt                # 运行时依赖（pycryptodome + pillow）
 ├── requirements-dev.txt            # 开发依赖（pytest + ruff）
+├── requirements-voice.txt          # 语音转写可选依赖（pilk + faster-whisper）
 ├── pyproject.toml / .editorconfig  # lint / 测试 / 编辑器配置
 ├── scripts/                        # 可复用脚本（确定性步骤）
 │   ├── wxcommon.py                 # 共享库：定位 / 清洗 / 密钥 / 拼图 / 轮次合并 / 时间工具
@@ -203,8 +214,9 @@ rfwg/
 │   ├── decrypt_images_v2.py        # 解 V2 原图：--room 聊天 / --sns 朋友圈 / --in 目录
 │   ├── split_long_image.py         # 过长图纵向切分成多段，供 AI 逐段清晰阅读
 │   ├── sort_images.py              # 按 AI 判读分拣：有用留存 / 无用回档
-│   └── decrypt_moments.py          # 解密 sns.db 取指定用户朋友圈
-├── tests/                          # 单元测试（合成 / 占位数据，22 项，不碰真实微信库）
+│   ├── decrypt_moments.py          # 解密 sns.db 取指定用户朋友圈
+│   └── transcribe_voice.py         # 语音转写：VoiceTemp 明文 SILK → 本地 faster-whisper 文字
+├── tests/                          # 单元测试（合成 / 占位数据，29 项，不碰真实微信库）
 ├── references/                     # 按需查阅的技术底料
 │   ├── toolchain-setup.md          # 工具链一次装好：安装 / 密钥落盘 / 故障排查 / 已测边界
 │   ├── wechat-local-data.md        # 微信本地结构 / SQLCipher / V2 图片格式
@@ -260,7 +272,7 @@ python3 "$RFWG/scripts/decrypt_images_v2.py" --sns --start 2026-06-21 --end 2026
 ```bash
 pip3 install -r requirements-dev.txt   # 开发依赖：pytest + ruff
 ruff check .                           # 静态检查
-pytest -q                              # 22 项单元测试（V2 解密往返 + 共享库纯函数）
+pytest -q                              # 29 项单元测试（V2 解密往返 + 共享库 + SILK 语音）
 ```
 
 CI 会在每次 push / PR 上跑同样的检查（见 `.github/workflows/ci.yml`）。参与贡献请先读 [CONTRIBUTING.md](CONTRIBUTING.md)。

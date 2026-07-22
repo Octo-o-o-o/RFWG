@@ -1,10 +1,10 @@
 ---
 name: rfwg
-description: 本 skill 用于对「本机、本人」的微信数据做离线深度调研并生成结构化报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖某主题"，或提到 wechat-cli、微信本地库、朋友圈(sns.db)、群聊导出、聊天记录调研、RFWG 时，应使用本 skill。也覆盖调研包的收尾移交（数据完整性核验/导读/分享前对齐检查）与在既有调研包上组织多轮深化调研。不用于他人设备或非本人账号数据、非微信来源的资料，以及无需读取本地微信库的一般写作/编码任务。
+description: 本 skill 用于对「本机、本人」的微信数据做离线深度调研并生成结构化报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖某主题、把微信语音消息转成文字纳入分析"，或提到 wechat-cli、微信本地库、朋友圈(sns.db)、群聊导出、聊天记录调研、语音转写、RFWG 时，应使用本 skill。也覆盖调研包的收尾移交（数据完整性核验/导读/分享前对齐检查）与在既有调研包上组织多轮深化调研。不用于他人设备或非本人账号数据、非微信来源的资料，以及无需读取本地微信库的一般写作/编码任务。
 license: MIT
 compatibility: 需 macOS(arm64，已端到端验证) 或 Windows(amd64，逻辑可移植但未真机验证)；依赖 wechat-cli 读取本地库并取数据库密钥、Python 3.12 + pycryptodome/pillow；全量原图与朋友圈配图需 wxkey 取图片密钥；读图与浏览器验收需 AI 侧读图能力 + Playwright（或本机无头 Chrome）。Linux 未适配。
 metadata:
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # RFWG · 从微信群做调研，生成报告
@@ -129,6 +129,18 @@ python3 "$RFWG/scripts/decrypt_images_v2.py" --sns \
 ```
 > ⚠️ `Sns/Img` 是**全账号共享**缓存，会混入他人朋友圈配图。解出后**只保留目标对象的**（读 sheets → keep.json → `sort_images.py`），其余回档/删除，并守 §纪律 的第三方隐私红线。默认策略仍是**正文逐条描述 + 配图推断**，够用就不必解像素。
 
+### 6b. 语音转写（可选：把 `[语音]` 变成文字，完全本地离线）
+群里的语音此前只是 `[语音]` 占位、内容全丢。微信语音是**明文 SILK v3**（在 `cache/<月>/Message/<md5(room)>/VoiceTemp/*.silk`，**无需任何密钥**），可本地转写：
+```bash
+pip install -r "$RFWG/requirements-voice.txt"        # 可选依赖：pilk + faster-whisper（不装不影响其它功能）
+python3 "$RFWG/scripts/transcribe_voice.py" --room "<username>" \
+    --start YYYY-MM-DD --end YYYY-MM-DD --out "$OUT/voices"   # 先 --dry-run 看命中，再 --limit 3 抽验
+```
+产出 `voices/voice_transcripts.md`（带时间戳的中文转写）。把它按时间戳并入时间线（把对应 `[语音]` 补成 `[语音转写] …`）。
+- **完全本地**：本地 faster-whisper，不外发音频；首次下模型后可 `--offline` 断网跑；中间 wav 转写后即删。可接受少量错字。
+- ⚠️ **覆盖“被播放过”的语音**：`VoiceTemp` 只对播放过的语音落地明文缓存，非全量；`--dry-run` 命中数明显少于聊天里的语音条数属正常。
+- 细节见 `references/toolchain-setup.md §8` 与 `references/wechat-local-data.md §6`。
+
 ### 7. 综合成稿（MD 已边做边有，再出 HTML 终稿）
 - 通读 01–05 + `images/_USEFUL.md`，**从头把线索按时间戳串一遍**，做**交叉印证**（群聊 vs 朋友圈 vs 图片，注意谁更早/第一人称）。
 - 用 `$RFWG/assets/report-template.html` 为骨架生成单文件 HTML（写作规范与 section 顺序见 `references/report-structure.md`）：
@@ -179,6 +191,7 @@ raw.json                      # 原始导出（勿公开）
 04-图片信息提取.md + images/   # 缩略图库 + _archived(回档) + _sheets + _slices(过长图切片) + _USEFUL.md + _manifest.json
 images_full/                  # 全量原图（可选，wxkey image-key 后解，结构同 images/）
 05-<对象>-朋友圈.md + moments.json   # 朋友圈（可选）；moments_img/ = 朋友圈配图（可选，需图片密钥）
+voices/voice_transcripts.md   # 语音转写（可选，本地离线 SILK→文字，带时间戳）
 <主题>-调研报告.html           # HTML 终稿（含 SVG，已浏览器验收）
 00-数据完整性核验.md           # 收尾件：数据边界清单（第 9 步）
 README-导读.md                # 收尾件：分享包入口（第 9 步）

@@ -3,6 +3,16 @@
 本项目所有值得注意的变更都记录在此文件。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.0] - 2026-07-22
+
+### 新增
+- **语音转写（可选，完全本地离线）**：新增 `transcribe_voice.py`——把微信语音（`cache/*/Message/<md5>/VoiceTemp` 下的**明文 SILK v3**，无需密钥）收集 → 本地 `pilk` 解码为 WAV → 本地 `faster-whisper` 转写成带时间戳的中文，产出 `voice_transcripts.md` 并入时间线。不调用任何云 ASR、音频不外发；模型可预下载后 `--offline` 断网运行；中间 wav 转写后即删。
+- `requirements-voice.txt`（可选依赖 pilk + faster-whisper）；`references` 固化语音格式（wechat-local-data §6）与离线安装（toolchain-setup §8）。
+- 语音单测 7 项（SILK 头识别 / 文件名时间戳解析）；SILK→WAV 解码经 `pilk` 合成往返验证。测试总数 22 → 29。
+
+### 说明
+- 语音覆盖“被播放过”的语音（`VoiceTemp` 明文缓存，非全量）；端到端转写首次需联网下模型、建议真机 `--dry-run`/`--limit` 抽验。
+
 ## [1.2.0] - 2026-07-22
 
 面向开源的专业化加固（多角度评审后的统一优化）。
@@ -42,6 +52,7 @@
 - RFWG 首个版本：从微信群 / 用户 / 主题做离线调研并生成报告（Markdown 分件 + 单文件 HTML + SVG）。
 - 发言轮次合并、图片缩略图收集与判读分拣、朋友圈 `sns.db` 解密、报告模板与浏览器验收流程。
 
+[1.3.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.0.0
