@@ -1,0 +1,4 @@
+# RFWG 语音转写依赖（可选）。仅当要把微信语音转成文字时安装；不装不影响其它功能。
+# 全程本地离线：faster-whisper 首次会联网下模型，下好后用 --offline 完全断网运行。
+pilk>=0.2.4,<0.3        # 微信 SILK v3 语音解码为 WAV（纯本地）；PyPI 最新 0.2.4，无 3.x
+faster-whisper>=1,<2   # 本地 ASR（CTranslate2 后端，CPU 可跑；模型可预下载后离线）
