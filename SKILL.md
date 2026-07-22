@@ -79,7 +79,7 @@ python3 "$RFWG/scripts/collect_images.py" --room "<username>" --out "$OUT/images
     --start YYYY-MM-DD --end YYYY-MM-DD
 ```
 得到 `images/NNN_MMDD_HHMM.jpg`（按时间编号）、`images/_manifest.json`、`images/_sheets/sheet_*.jpg`（索引拼图）。
-然后 **AI 逐张读 sheets**（用读图能力打开每张 `sheet_*.jpg`），识别每张图：截图/架构图/数据图/产品/行业信息 = **有价值**；表情/风景/头像/视频封面/装饰 = **噪音**。对拿不准或文字密的单图，单独打开原图放大读。判读完写 `keep.json`——key 是**不带前导零**的图号、value 是一句话价值，例如 `{"5":"模型清单截图","29":"发布会海报"}`，再分拣：
+然后 **AI 逐张读 sheets**（用读图能力打开每张 `sheet_*.jpg`），识别每张图：截图/架构图/数据图/产品/行业信息 = **有价值**；表情/风景/头像/视频封面/装饰 = **噪音**。对拿不准或文字密的单图，单独打开原图放大读；**遇到过长图（长截图/长清单）先按 5c 切分再读**。判读完写 `keep.json`——key 是**不带前导零**的图号、value 是一句话价值，例如 `{"5":"模型清单截图","29":"发布会海报"}`，再分拣：
 ```bash
 python3 "$RFWG/scripts/sort_images.py" --images "$OUT/images" --keep "$OUT/keep.json"
 ```
@@ -94,8 +94,16 @@ python3 "$RFWG/scripts/decrypt_images_v2.py" --room "<username>" \
 产出结构同上（`images_full/NNN_….jpg` + `_manifest.json` + `_sheets/`），照样 **读 sheets → 写 keep.json → `sort_images.py`** 判读分拣。
 - 先 `--dry-run` 看命中多少张、时间对不对（**不需要密钥**）；首次真解建议 `--limit 5` 抽验清晰度，再全量。
 - 有 `image_xor_key` 就让脚本用它（自动或 `--xor 0x37`），**不要暴力枚举**（更快更准）。`--variant orig/hd/thumb/all` 选原图/高清/缩略/全部。
+
+**5c. 过长图必须先切分再读（重要，否则读不清）。** 长截图/长清单整张喂给大模型会被降采样、文字糊掉；先纵向切成带重叠的多段，逐段读：
+```bash
+python3 "$RFWG/scripts/split_long_image.py" --in "$OUT/images/<那张长图>.jpg" --out "$OUT/images/_slices"
+# 也可整目录批量（正常比例图自动跳过）：--in "$OUT/images"
+```
+得到 `<原名>_p01.png、_p02.png…`（每段≈一屏、相邻段重叠 12% 防切断文字）。**AI 按 `_pNN` 顺序逐段读**，衔接处以后一段为准；读完把长图里的信息写进 `04-图片信息提取.md`。
+- 判定阈值 `--max-aspect`（默认高/宽>2 才切）；窄而长的图加 `--min-width 1000` 放大提升小字可读性；`--force` 强制切。
+- 同样适用于**用户手工提供的长截图**与第 8 步的浏览器整页截图 `full.png`（`--force --slice-height 2200`）。切完建议再写一份**全文转录 MD**落盘，后续引用转录文+段号，不反复读原图。
 > 若 `collect_images.py` 收不到图：该时段图片没被微信加载过缩略图，或需走上面的 V2 原图。`--media` 解析图片路径有 bug，别用它映射（见 `references/wechat-local-data.md` §1）。
-> 用户**手工提供**的长截图（如别人整理的长图）：先用 Pillow 竖切成可读的段图逐段读，再写一份**全文转录 MD** 落盘——后续引用一律引转录文+段图号，不要反复读原图。
 
 ### 6. 朋友圈补充（若关注某人，且需要其朋友圈）
 ```bash
@@ -133,7 +141,8 @@ python3 -m http.server 8899 --bind 127.0.0.1 -d "$OUT" >/dev/null 2>&1 &   # -d 
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
     --hide-scrollbars --force-device-scale-factor=1 --window-size=1240,9400 \
     --screenshot="$OUT/full.png" "http://127.0.0.1:8899/report.html"
-  # 再用 Pillow 把 full.png 竖切成若干段，逐段用读图能力检查
+  # 再把 full.png 竖切成若干段逐段读（复用第 5c 脚本）：
+  python3 "$RFWG/scripts/split_long_image.py" --in "$OUT/full.png" --out "$OUT/_shots" --force --slice-height 2200
   ```
 - 发现溢出/SVG 越界/文字被裁/信息缺失 → 改 HTML → 重渲染，直到干净。
 
@@ -157,7 +166,7 @@ python3 -m http.server 8899 --bind 127.0.0.1 -d "$OUT" >/dev/null 2>&1 &   # -d 
 raw.json                      # 原始导出（勿公开）
 01-完整消息.md / 02-<主题>-精华.md
 03-<对象>-发言精华.md          # 人物提炼（可选）
-04-图片信息提取.md + images/   # 缩略图库 + _archived(回档) + _sheets + _USEFUL.md + _manifest.json
+04-图片信息提取.md + images/   # 缩略图库 + _archived(回档) + _sheets + _slices(过长图切片) + _USEFUL.md + _manifest.json
 images_full/                  # 全量原图（可选，wxkey image-key 后解，结构同 images/）
 05-<对象>-朋友圈.md + moments.json   # 朋友圈（可选）；moments_img/ = 朋友圈配图（可选，需图片密钥）
 <主题>-调研报告.html           # HTML 终稿（含 SVG，已浏览器验收）
