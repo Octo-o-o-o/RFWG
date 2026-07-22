@@ -13,6 +13,8 @@
 - 工程配置：`pyproject.toml`（ruff + pytest）、`requirements-dev.txt`、`.editorconfig`、GitHub Actions CI 与 issue / PR 模板。
 - 脱敏示例报告 `docs/sample-report.html`；README 增加徽章、目录、快速开始与效果预览。
 - 共享工具函数 `day_bounds()`（时间范围解析 + 校验）与 `write_manifest()`。
+- README 增补「核心能力与标准用法」（按用法组织的能力总览）与「法律声明与第三方归属」（第三方项目 / 商标 / 无关联声明）。
+- 统一小写标识：skill 目录名、GitHub 仓库名与文档中的仓库 URL 一律用 `rfwg`（品牌缩写 `RFWG` 与 `$RFWG` 变量名保留大写）。
 
 ### 修复
 - **报告模板未随仓库发布**：`.gitignore` 的 `report*.html` 误伤 `assets/report-template.html`，导致克隆后缺少报告骨架（第 7 步开箱即坏）。
@@ -40,6 +42,6 @@
 - RFWG 首个版本：从微信群 / 用户 / 主题做离线调研并生成报告（Markdown 分件 + 单文件 HTML + SVG）。
 - 发言轮次合并、图片缩略图收集与判读分拣、朋友圈 `sns.db` 解密、报告模板与浏览器验收流程。
 
-[1.2.0]: https://github.com/Octo-o-o-o/RFWG/releases/tag/v1.2.0
-[1.1.0]: https://github.com/Octo-o-o-o/RFWG/releases/tag/v1.1.0
-[1.0.0]: https://github.com/Octo-o-o-o/RFWG/releases/tag/v1.0.0
+[1.2.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.2.0
+[1.1.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.1.0
+[1.0.0]: https://github.com/Octo-o-o-o/rfwg/releases/tag/v1.0.0

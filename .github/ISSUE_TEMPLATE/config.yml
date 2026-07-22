@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: 安全 / 隐私问题
-    url: https://github.com/Octo-o-o-o/RFWG/security/advisories/new
+    url: https://github.com/Octo-o-o-o/rfwg/security/advisories/new
     about: 请通过私密 Security Advisory 报告，切勿在公开 issue 粘贴真实数据。

@@ -16,7 +16,7 @@ RFWG 处理真实的微信隐私数据。向本仓库提交任何以下内容都
 ## 开发环境
 
 ```bash
-git clone https://github.com/Octo-o-o-o/RFWG && cd RFWG
+git clone https://github.com/Octo-o-o-o/rfwg && cd RFWG
 pip install -r requirements.txt -r requirements-dev.txt   # 运行时 + 开发依赖
 ```
 
