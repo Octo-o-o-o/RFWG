@@ -22,8 +22,10 @@ def main():
     ap.add_argument('--images', required=True)
     ap.add_argument('--keep', required=True, help='JSON: {"图号":"价值描述"}')
     a = ap.parse_args()
-    manifest = {str(x['idx']): x for x in json.load(open(os.path.join(a.images, '_manifest.json'), encoding='utf-8'))}
-    raw_keep = json.load(open(a.keep, encoding='utf-8'))
+    with open(os.path.join(a.images, '_manifest.json'), encoding='utf-8') as f:
+        manifest = {str(x['idx']): x for x in json.load(f)}
+    with open(a.keep, encoding='utf-8') as f:
+        raw_keep = json.load(f)
     # 归一化图号：容忍 "005"/" 5 " 这类写法，并对匹配不上 manifest 的 key 告警
     keep = {}
     for k, v in raw_keep.items():
@@ -46,7 +48,10 @@ def main():
         if idx in keep:
             kept += 1
         else:
-            shutil.move(f, os.path.join(arch, it['file']))
+            dst = os.path.join(arch, it['file'])
+            if os.path.exists(dst):    # Windows 上 move 到已存在目标会报错，先清掉（重复运行幂等）
+                os.remove(dst)
+            shutil.move(f, dst)
             moved += 1
     with open(os.path.join(a.images, '_USEFUL.md'), 'w', encoding='utf-8') as w:
         w.write('# 有价值图片清单\n\n')

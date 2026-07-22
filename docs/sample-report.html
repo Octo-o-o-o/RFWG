@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>示例报告 · 向量数据库选型｜RFWG</title>
+<meta name="description" content="RFWG 生成的调研报告示例（数据均为虚构，仅用于演示产出形态）。">
+<!--
+  这是 RFWG 的【示例报告】，用于展示 assets/report-template.html 的最终形态。
+  报告中的人物、公司、数字、结论【全部为虚构】，与任何真实个人或组织无关。
+-->
+<style>
+  :root{--ink:#1b1b2b;--muted:#6b6b7b;--line:#e7e5e4;--bg:#faf9f7;--card:#fff;--indigo:#4f46e5;--indigo-soft:#eef2ff;--teal:#0d9488;--teal-soft:#e6fffb;--slate:#64748b;--slate-soft:#f1f5f9;--amber:#b45309;--amber-soft:#fef3c7;--rose:#be123c;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 24px rgba(20,20,40,.05)}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+  nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:28px 18px 40px;border-right:1px solid var(--line);background:#fff}
+  nav.toc .brand{font-weight:800;font-size:15px;margin-bottom:4px}.brand span{color:var(--indigo)}
+  nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;font-size:13.5px;padding:4px 10px;border-radius:7px;border-left:2px solid transparent}
+  nav.toc a:hover{background:var(--indigo-soft);color:var(--indigo)}
+  nav.toc a.lv2{padding-left:22px;font-size:12.5px}
+  nav.toc a.active{color:var(--indigo);border-left-color:var(--indigo);background:var(--indigo-soft)}
+  main{padding:46px 56px 120px;min-width:0}
+  header.hero{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--indigo);background:var(--indigo-soft);padding:4px 12px;border-radius:999px}
+  h1{font-family:Georgia,"Songti SC",serif;font-size:34px;line-height:1.25;margin:16px 0 8px}
+  .dek{font-size:16px;color:var(--muted);max-width:64ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:18px}
+  .chip{font-size:12.5px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;box-shadow:var(--shadow)}.chip b{color:var(--indigo)}
+  h2{font-family:Georgia,"Songti SC",serif;font-size:25px;margin:56px 0 6px;scroll-margin-top:20px}
+  h2 .num{color:var(--indigo);font-size:16px;font-weight:700;margin-right:10px;font-family:-apple-system,sans-serif}
+  h2::after{content:"";display:block;width:44px;height:3px;background:var(--indigo);border-radius:2px;margin-top:10px}
+  h3{font-size:18px;margin:32px 0 6px}h4{font-size:15px;margin:20px 0 4px}
+  p{margin:10px 0}.lead{font-size:17.5px;color:#2c2c40}
+  blockquote{margin:14px 0;padding:12px 18px;background:var(--indigo-soft);border-left:3px solid var(--indigo);border-radius:0 10px 10px 0;color:#33336a;font-size:15px}
+  code{background:#f4f4f5;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;color:#b91c1c}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);margin:16px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .callout{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px}
+  .callout.tip{background:var(--teal-soft);border:1px solid #99f6e4}
+  .callout.warn{background:var(--amber-soft);border:1px solid #fcd34d;color:#7c4a03}
+  .callout.key{background:var(--indigo-soft);border:1px solid #c7d2fe}
+  .callout .t{font-weight:800;display:block;margin-bottom:4px}
+  figure{margin:24px 0}figure svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+  figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:8px}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f8f8f9;font-weight:700;font-size:12.5px;color:#3a3a4a}tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;font-weight:700}
+  .tag.sig{background:var(--teal-soft);color:var(--teal)}.tag.noise{background:var(--slate-soft);color:var(--slate)}
+  mark{background:#fef08a;padding:0 3px;border-radius:3px}
+  .demo-banner{max-width:1240px;margin:0 auto;background:#fff7ed;border-bottom:1px solid #fcd34d;color:#7c4a03;font-size:13px;padding:9px 24px;text-align:center}
+  .footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}nav.toc{display:none}main{padding:28px 20px 80px}.grid2{grid-template-columns:1fr}h1{font-size:27px}}
+</style>
+</head>
+<body>
+<div class="demo-banner">📋 <b>示例报告</b>：以下人物、公司、数字与结论<b>全部为虚构</b>，仅用于演示 RFWG 的产出形态，与任何真实个人或组织无关。</div>
+<div class="wrap">
+  <nav class="toc" aria-label="目录">
+    <div class="brand"><span>RFWG</span> · 调研报告</div>
+    <div class="sub">向量数据库选型 · 示例</div>
+    <a href="#summary">执行摘要</a>
+    <a href="#method">方法与数据来源</a>
+    <a href="#compare">核心概念：三方对比</a>
+    <a href="#timeline">关键人物与时间线</a>
+    <a href="#spectrum">多方观点光谱</a>
+    <a href="#signal">信号 vs 噪音</a>
+    <a href="#appendix">附录</a>
+  </nav>
+  <main>
+    <header class="hero">
+      <span class="kicker">示例 · 技术选型调研</span>
+      <h1>向量数据库选型：某技术群 30 天讨论调研</h1>
+      <p class="dek">围绕 pgvector / Milvus / Qdrant 三条路线，梳理群内 6 月一个月的实测、争论与共识，并交叉印证到可落地的选型建议。</p>
+      <div class="meta">
+        <span class="chip">时间范围 <b>2026-06-01 ~ 06-30</b></span>
+        <span class="chip">消息 <b>约 8,000 条</b></span>
+        <span class="chip">图片 <b>42 张（读 42）</b></span>
+        <span class="chip">重点人物 <b>3 位</b></span>
+        <span class="chip">数据完整度 <b>文字完整 / 图片 100%</b></span>
+      </div>
+    </header>
+
+    <section id="summary" data-section="executive-summary">
+      <h2><span class="num">01</span>执行摘要</h2>
+      <div class="callout key">
+        <span class="t">TL;DR</span>
+        群内 6 月的选型讨论集中在 <mark>中小规模用 pgvector、亿级向量上 Milvus</mark>，Qdrant 作为“单机高性能、部署轻”的中间选项被反复提及。分歧主要来自“是否愿意为独立向量库增加一套运维”。
+      </div>
+      <ul>
+        <li><b>群友 A（架构角色）</b>主张“能不引入新组件就不引入”，力推在既有 PostgreSQL 上用 <code>pgvector</code>（06-08 长贴）。</li>
+        <li><b>群友 B（算法角色）</b>给出亿级向量下 <code>Milvus</code> 的召回/延迟实测，认为规模上来后专用库不可替代（06-15 截图）。</li>
+        <li><b>群友 C</b>用 <code>Qdrant</code> 做了一周压测，结论是“单机场景性价比最高、部署最省心”（06-22 数据图）。</li>
+        <li><b>共识</b>：先按数据规模与团队运维能力分档，不存在“一个库通吃”。</li>
+      </ul>
+      <div class="callout warn"><span class="t">诚实边界</span>本报告仅覆盖该群 6 月公开讨论；未采集任何压测原始环境，实测数字以群内截图为准，未独立复现。</div>
+    </section>
+
+    <section id="method" data-section="method">
+      <h2><span class="num">02</span>方法与数据来源</h2>
+      <p>数据来自本机微信本地库（离线导出），经清洗、主题聚焦、读图判读后交叉成稿。采集管线如下：</p>
+      <figure>
+        <svg viewBox="0 0 960 150" role="img" aria-label="采集管线图">
+          <defs>
+            <marker id="arw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#4f46e5"></path>
+            </marker>
+          </defs>
+          <g font-family="-apple-system,sans-serif" font-size="13" text-anchor="middle">
+            <rect x="12" y="50" width="150" height="50" rx="10" fill="#eef2ff" stroke="#c7d2fe"></rect>
+            <text x="87" y="72">导出全量消息</text><text x="87" y="90" fill="#6b6b7b" font-size="11">raw.json · 8k 条</text>
+            <rect x="212" y="50" width="150" height="50" rx="10" fill="#eef2ff" stroke="#c7d2fe"></rect>
+            <text x="287" y="72">清洗 + 主题聚焦</text><text x="287" y="90" fill="#6b6b7b" font-size="11">±5 上下文命中</text>
+            <rect x="412" y="50" width="150" height="50" rx="10" fill="#e6fffb" stroke="#99f6e4"></rect>
+            <text x="487" y="72">读图判读分拣</text><text x="487" y="90" fill="#6b6b7b" font-size="11">42 图 · 保留 27</text>
+            <rect x="612" y="50" width="150" height="50" rx="10" fill="#e6fffb" stroke="#99f6e4"></rect>
+            <text x="687" y="72">交叉印证</text><text x="687" y="90" fill="#6b6b7b" font-size="11">群聊×图片×时间线</text>
+            <rect x="812" y="50" width="136" height="50" rx="10" fill="#4f46e5"></rect>
+            <text x="880" y="72" fill="#fff">成稿 HTML</text><text x="880" y="90" fill="#e0e7ff" font-size="11">本报告</text>
+            <line x1="162" y1="75" x2="206" y2="75" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arw)"></line>
+            <line x1="362" y1="75" x2="406" y2="75" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arw)"></line>
+            <line x1="562" y1="75" x2="606" y2="75" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arw)"></line>
+            <line x1="762" y1="75" x2="806" y2="75" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arw)"></line>
+          </g>
+        </svg>
+        <figcaption>图 1 · RFWG 采集与成稿管线（示例数字）</figcaption>
+      </figure>
+    </section>
+
+    <section id="compare" data-section="comparison">
+      <h2><span class="num">03</span>核心概念：三方对比</h2>
+      <p>群内讨论把候选收敛为三条路线，关键维度对照如下（结论均为群内观点转述，非官方基准）：</p>
+      <table>
+        <thead><tr><th>维度</th><th>pgvector</th><th>Milvus</th><th>Qdrant</th></tr></thead>
+        <tbody>
+          <tr><td>部署复杂度</td><td>最低（PG 扩展）</td><td>较高（分布式组件）</td><td>低（单二进制）</td></tr>
+          <tr><td>规模上限</td><td>百万~千万级</td><td>亿级及以上</td><td>千万级（单机）</td></tr>
+          <tr><td>运维成本</td><td>复用现有 PG</td><td>需专门运维</td><td>轻量</td></tr>
+          <tr><td>群内定位</td><td><span class="tag sig">默认起点</span></td><td><span class="tag sig">大规模首选</span></td><td><span class="tag sig">单机性价比</span></td></tr>
+        </tbody>
+      </table>
+      <div class="callout tip"><span class="t">来源</span>对照表综合自群友 A（06-08 12:14）、群友 B（06-15 21:03 截图）、群友 C（06-22 09:41 数据图）的发言，均标注时间戳以便核对。</div>
+    </section>
+
+    <section id="timeline" data-section="timeline">
+      <h2><span class="num">04</span>关键人物与时间线</h2>
+      <p>三位重点人物在 6 月的关键节点：</p>
+      <figure>
+        <svg viewBox="0 0 960 260" role="img" aria-label="关键时间线">
+          <g font-family="-apple-system,sans-serif" font-size="13">
+            <line x1="60" y1="20" x2="60" y2="240" stroke="#e7e5e4" stroke-width="2"></line>
+            <circle cx="60" cy="46" r="6" fill="#4f46e5"></circle>
+            <text x="82" y="42" font-weight="700">06-08 · 群友 A</text>
+            <text x="82" y="60" fill="#6b6b7b">长贴：主张 pgvector，“别为向量单独加一套运维”。</text>
+            <circle cx="60" cy="106" r="6" fill="#0d9488"></circle>
+            <text x="82" y="102" font-weight="700">06-15 · 群友 B</text>
+            <text x="82" y="120" fill="#6b6b7b">贴出亿级向量 Milvus 召回/延迟实测截图。</text>
+            <circle cx="60" cy="166" r="6" fill="#b45309"></circle>
+            <text x="82" y="162" font-weight="700">06-22 · 群友 C</text>
+            <text x="82" y="180" fill="#6b6b7b">一周 Qdrant 压测数据图：单机 QPS 与内存占用。</text>
+            <circle cx="60" cy="226" r="6" fill="#4f46e5"></circle>
+            <text x="82" y="222" font-weight="700">06-28 · 群内共识</text>
+            <text x="82" y="240" fill="#6b6b7b">按规模分档选型，收敛为本报告结论。</text>
+          </g>
+        </svg>
+        <figcaption>图 2 · 重点人物关键节点时间线（示例）</figcaption>
+      </figure>
+    </section>
+
+    <section id="spectrum" data-section="spectrum">
+      <h2><span class="num">05</span>多方观点光谱</h2>
+      <p>从“复用现有栈”到“上专用向量库”，三方立场在光谱上的位置：</p>
+      <figure>
+        <svg viewBox="0 0 960 130" role="img" aria-label="立场光谱">
+          <defs>
+            <linearGradient id="spec" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#4f46e5"></stop>
+              <stop offset="1" stop-color="#0d9488"></stop>
+            </linearGradient>
+          </defs>
+          <rect x="60" y="54" width="840" height="14" rx="7" fill="url(#spec)"></rect>
+          <g font-family="-apple-system,sans-serif" font-size="12" text-anchor="middle">
+            <text x="60" y="42" text-anchor="start" fill="#4f46e5" font-weight="700">复用现有 PG 栈</text>
+            <text x="900" y="42" text-anchor="end" fill="#0d9488" font-weight="700">上专用向量库</text>
+            <circle cx="180" cy="61" r="8" fill="#fff" stroke="#4f46e5" stroke-width="2"></circle>
+            <text x="180" y="96" font-weight="700">群友 A</text><text x="180" y="112" fill="#6b6b7b">pgvector</text>
+            <circle cx="520" cy="61" r="8" fill="#fff" stroke="#b45309" stroke-width="2"></circle>
+            <text x="520" y="96" font-weight="700">群友 C</text><text x="520" y="112" fill="#6b6b7b">Qdrant 单机</text>
+            <circle cx="820" cy="61" r="8" fill="#fff" stroke="#0d9488" stroke-width="2"></circle>
+            <text x="820" y="96" font-weight="700">群友 B</text><text x="820" y="112" fill="#6b6b7b">Milvus 集群</text>
+          </g>
+        </svg>
+        <figcaption>图 3 · 三方立场光谱（示例）</figcaption>
+      </figure>
+    </section>
+
+    <section id="signal" data-section="signal-noise">
+      <h2><span class="num">06</span>信号 vs 噪音</h2>
+      <div class="grid2">
+        <div class="card">
+          <h4><span class="tag sig">信号</span> 值得读</h4>
+          <ul>
+            <li>群友 B 的 Milvus 实测截图（含 recall@10 与 P99 延迟）。</li>
+            <li>群友 C 的 Qdrant 单机压测数据图。</li>
+            <li>群友 A 关于“运维成本 &gt; 性能收益”的论证长贴。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4><span class="tag noise">噪音</span> 已过滤</h4>
+          <ul>
+            <li>“哈哈”“+1”等无信息量应答。</li>
+            <li>与选型无关的表情包与闲聊。</li>
+            <li>转发的营销软文（无一手数据）。</li>
+          </ul>
+        </div>
+      </div>
+      <p><b>未解的真问题：</b>群内没有统一数据集下的横向 benchmark，三方数字口径不完全一致——若要定论，需在同一硬件/数据集上复现。</p>
+    </section>
+
+    <section id="appendix" data-section="appendix">
+      <h2><span class="num">07</span>附录</h2>
+      <h4>人物对照（均为虚构占位）</h4>
+      <table>
+        <thead><tr><th>代号</th><th>角色</th><th>主要立场</th></tr></thead>
+        <tbody>
+          <tr><td>群友 A</td><td>后端架构</td><td>复用 PG + pgvector</td></tr>
+          <tr><td>群友 B</td><td>算法/检索</td><td>大规模上 Milvus</td></tr>
+          <tr><td>群友 C</td><td>全栈</td><td>单机首选 Qdrant</td></tr>
+        </tbody>
+      </table>
+      <p class="footer">本报告由 <b>RFWG</b> 生成（示例）。所有内容为虚构演示，引用格式为「角色 + 时间戳」以便核对。对外分享真实报告前请完成匿名化，详见项目 DISCLAIMER。</p>
+    </section>
+  </main>
+</div>
+<script>
+const links=[...document.querySelectorAll('nav.toc a')];
+const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);if(a)a.classList.add('active');}});},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

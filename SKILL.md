@@ -1,8 +1,10 @@
 ---
-name: RFWG
-description: Research From Wechat Group — 从指定的微信群 / 微信用户 / 主题做深度调研并生成报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖 XX"，或提到 wechat-cli、微信本地数据、朋友圈(sns.db)、群聊导出、聊天记录调研时使用。调研包的收尾移交（数据完整性核验/导读/分享前对齐检查）与在既有调研包上组织多轮深化调研，也属本 skill 范围。仅用于本机本人微信数据的离线分析。
+name: rfwg
+description: 本 skill 用于对「本机、本人」的微信数据做离线深度调研并生成结构化报告（Markdown 分件 + 单文件 HTML，逻辑部分用 SVG 图）。当用户要"调研/分析某个微信群、看看某群最近在聊什么、群里都聊了啥、分析某人在群里或朋友圈说了什么/发了什么、把某群关于某主题的讨论整理成报告、从微信聊天记录里挖某主题"，或提到 wechat-cli、微信本地库、朋友圈(sns.db)、群聊导出、聊天记录调研、RFWG 时，应使用本 skill。也覆盖调研包的收尾移交（数据完整性核验/导读/分享前对齐检查）与在既有调研包上组织多轮深化调研。不用于他人设备或非本人账号数据、非微信来源的资料，以及无需读取本地微信库的一般写作/编码任务。
 license: MIT
-version: 1.1.0
+compatibility: 需 macOS(arm64，已端到端验证) 或 Windows(amd64，逻辑可移植但未真机验证)；依赖 wechat-cli 读取本地库并取数据库密钥、Python 3.12 + pycryptodome/pillow；全量原图与朋友圈配图需 wxkey 取图片密钥；读图与浏览器验收需 AI 侧读图能力 + Playwright（或本机无头 Chrome）。Linux 未适配。
+metadata:
+  version: 1.2.0
 ---
 
 # RFWG · 从微信群做调研，生成报告
@@ -15,7 +17,7 @@ version: 1.1.0
 
 ## 适用范围
 
-目前脚本按 **macOS + 微信 4.x** 的本地布局与 `wxkey` 授权链路编写；Windows/Linux 未测试、依赖链大概率不通。
+已在 **macOS(arm64) + 微信 4.x** 端到端验证。**Windows(amd64)**：底层数据格式与解密/图片/切图脚本跨平台通用，路径与密钥已适配，但**尚未在真机端到端验证**，且文字导出需一次格式映射（见 `references/toolchain-setup.md` §3）——首次使用请按 §7 自校验。**Linux** 未适配。
 
 ## 环境自检（第 0 步，必做）
 
@@ -28,11 +30,19 @@ python3 -c "import Crypto,PIL"        # 缺则：pip3 install -r "$RFWG/requirem
 - **要全量原图才需要的额外一步**：`all_keys.json` 无图片密钥；解 V2 原图前先装 `wxkey` 并 `wxkey bootstrap && wxkey image-key` 取 `image_key/image_xor_key`（见第 5 步与 toolchain-setup §2）。**只要文字/缩略图就不用装 wxkey。**
 - **Python 依赖**：`pip3 install -r "$RFWG/requirements.txt"`（`pycryptodome`+`pillow`）；pip 报 externally-managed 时加 `--break-system-packages`，或用虚拟环境 `python3 -m venv ~/.rfwg-venv`（后续用 `~/.rfwg-venv/bin/python3` 跑脚本）。
 - **浏览器验收**：指 AI 环境自带的浏览器工具（如 playwright MCP）；没有就走第 8 步的本机无头 Chrome 方案。
-- **平台**：macOS(arm64) 已端到端验证；**Windows(amd64) 也可用**——底层数据/解密/图片脚本跨平台，差异只在"装哪个工具、怎么取密钥、数据路径"，且**文字导出需一次格式映射**（`history` 那套 CLI 是 macOS 独占）。**Windows 用户按 `references/toolchain-setup.md` §3 走**（设 `RFWG_DB_DIR`/`RFWG_KEYS`，用社区内存扫描器取密钥，文字按 §3.4 映射成 raw.json）。Linux 未适配。
+- **平台**：口径见上方「适用范围」。Windows 用户按 `references/toolchain-setup.md` §3 走（设 `RFWG_DB_DIR`/`RFWG_KEYS`，用社区内存扫描器取密钥，文字按 §3.4 映射成 raw.json）。
 
 数据结构与解密细节见 `references/wechat-local-data.md`（需要时再读）。
 
-`${CLAUDE_SKILL_DIR}` 指向本 skill 目录（Claude Code 会在注入前替换成绝对路径）。建议先设 `RFWG=${CLAUDE_SKILL_DIR}` 与输出目录 `OUT=~/WorkSpace/<主题>-调研`。**若运行时不替换该变量（如某些非 Claude Code 工具），把 `RFWG` 直接设成本 skill 的绝对路径。**
+**先设两个变量**（后续所有命令都用它们）：`RFWG` 指向本 skill 目录、`OUT` 指向输出目录（**务必放在本仓库之外**）。
+
+```bash
+RFWG=${CLAUDE_SKILL_DIR}          # Claude Code 会在注入前替换成绝对路径
+# 若你的工具不替换该变量（如 Cursor 等），直接写死绝对路径，例如：
+#   RFWG=~/.cursor/skills/rfwg    # Cursor
+#   RFWG=~/.claude/skills/rfwg    # Claude Code（手动定位时）
+OUT=~/WorkSpace/<主题>-调研 && mkdir -p "$OUT"
+```
 
 ## 标准流程
 
@@ -121,7 +131,7 @@ python3 "$RFWG/scripts/decrypt_images_v2.py" --sns \
 
 ### 7. 综合成稿（MD 已边做边有，再出 HTML 终稿）
 - 通读 01–05 + `images/_USEFUL.md`，**从头把线索按时间戳串一遍**，做**交叉印证**（群聊 vs 朋友圈 vs 图片，注意谁更早/第一人称）。
-- 用 `assets/report-template.html` 为骨架生成单文件 HTML（写作规范与 section 顺序见 `references/report-structure.md`）：
+- 用 `$RFWG/assets/report-template.html` 为骨架生成单文件 HTML（写作规范与 section 顺序见 `references/report-structure.md`）：
   - **有逻辑关系的内容一律做成 SVG**（管线/对比表/能力卡/时间线/光谱/韦恩图，纯 `<text>`+`viewBox`，无外部依赖）。
   - 事实结论**带来源+时间戳**；显式区分**信号 vs 噪音**；给出未解的真问题。
   - 保留 `data-section` 语义标记，对 AI 友好。

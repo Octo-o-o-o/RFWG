@@ -12,7 +12,6 @@
 """
 import argparse
 import os
-import re
 import sys
 from collections import Counter
 
@@ -71,7 +70,7 @@ def build_full(parsed, chat, out, img_index=None):
     per_day = Counter(p['date'] for p in parsed if p['date'])
     sender = Counter(p['sender'] for p in parsed)
     L = [f'# {chat} 完整消息梳理', '',
-         f'> 数据来源：本地微信数据库（wechat-cli 解密导出）',
+         '> 数据来源：本地微信数据库（wechat-cli 解密导出）',
          f'> 消息总数：**{len(parsed)}** 条', '', '## 概览统计', '', '### 每日消息量', '',
          '| 日期 | 星期 | 消息数 |', '|------|------|-------:|']
     for k in sorted(per_day):
@@ -88,7 +87,8 @@ def build_full(parsed, chat, out, img_index=None):
             cur = b['date']
             L += ['', f"### {cur}（周{weekday_cn(cur)}）", '']
         L.append(render_block(b, img_index))
-    open(out, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(L) + '\n')
     return len(parsed)
 
 
@@ -139,7 +139,8 @@ def build_topic(parsed, topic, keywords, ctx, out, img_index=None):
                     q = _quote_str(p, 200)
                     L.append(f"        · {c}" + (f"  （{q}）" if q else ""))
         L.append('')
-    open(out, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(L) + '\n')
     return len(hits), len(segs)
 
 
@@ -151,7 +152,8 @@ def main():
     ap.add_argument('--topic', default='', help='主题名，留空则跳过主题精华')
     ap.add_argument('--keywords', default='', help='逗号分隔关键词（中英混合，英文不区分大小写）')
     ap.add_argument('--context', type=int, default=5, help='命中前后各取 N 条')
-    ap.add_argument('--images', default='', help='可选：images 目录（含 _manifest.json），用于给 [图片] 贴对应缩略图文件名')
+    ap.add_argument('--images', default='',
+                    help='可选：images 目录（含 _manifest.json），用于给 [图片] 贴对应缩略图文件名')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     img_index = load_image_index(a.images) if a.images else {}

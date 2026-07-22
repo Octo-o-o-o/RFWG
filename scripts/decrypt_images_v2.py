@@ -42,7 +42,8 @@ import datetime
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from wxcommon import wechat_root, room_md5, make_sheets, months_between  # noqa: E402
+from wxcommon import (wechat_root, room_md5, make_sheets,  # noqa: E402
+                      months_between, day_bounds, write_manifest)
 
 V2_MAGIC = bytes([7, 8, 0x56, 0x32, 8, 7])
 
@@ -142,7 +143,8 @@ def discover_keys(cli_key, cli_xor):
         if not os.path.exists(cfg):
             continue
         try:
-            data = json.load(open(cfg, encoding='utf-8'))
+            with open(cfg, encoding='utf-8') as fh:
+                data = json.load(fh)
         except (json.JSONDecodeError, OSError):
             continue
         if not aes:
@@ -200,12 +202,8 @@ def sources_dir(inp, start, end):
 
 
 def _range_ts(start, end):
-    if not start or not end:
-        return None, None
-    s = datetime.date.fromisoformat(start)
-    e = datetime.date.fromisoformat(end)
-    return (datetime.datetime.combine(s, datetime.time.min).timestamp(),
-            datetime.datetime.combine(e, datetime.time.max).timestamp())
+    # 复用 wxcommon.day_bounds：格式/顺序统一校验；目录模式（无 start/end）返回 (None, None)
+    return day_bounds(start, end, required=False)
 
 
 def main():
@@ -226,9 +224,8 @@ def main():
     a = ap.parse_args()
 
     root = wechat_root()
-    if a.room or a.sns:
-        if not (a.start and a.end):
-            raise SystemExit('--room / --sns 需要 --start 与 --end（YYYY-MM-DD）。')
+    if (a.room or a.sns) and not (a.start and a.end):
+        raise SystemExit('--room / --sns 需要 --start 与 --end（YYYY-MM-DD）。')
 
     if a.room:
         items = sources_room(root, a.room, a.start, a.end, a.variant)
@@ -253,6 +250,11 @@ def main():
         v2 = v2[:a.limit]
     print(f'[{label}] 命中 V2 图片 {len(v2)} 张（时间范围 {a.start or "-"}~{a.end or "-"}）')
 
+    if not v2:
+        print('  未命中任何 V2 图片：请核对 --room username / --start/--end，或确认该来源确有原图；'
+              '只要缩略图请改用 collect_images.py。')
+        return
+
     if a.dry_run:
         for ts, f in v2[:8]:
             print('  ', datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M'), os.path.basename(f))
@@ -276,7 +278,8 @@ def main():
     manifest, ok, fail = [], 0, 0
     for ts, f in v2:
         try:
-            data = open(f, 'rb').read()
+            with open(f, 'rb') as fh:
+                data = fh.read()
         except OSError:
             fail += 1
             continue
@@ -300,10 +303,11 @@ def main():
         # 只记相对文件名+时间，不写含本机用户名的绝对源路径
         manifest.append({'idx': ok + 1, 'time': dt.strftime('%Y-%m-%d %H:%M'), 'file': name})
         ok += 1
-    json.dump(manifest, open(os.path.join(a.out, '_manifest.json'), 'w'), ensure_ascii=False, indent=1)
+    write_manifest(a.out, manifest)
     print(f'decrypted {ok}, failed {fail} -> {a.out}')
     if ok == 0:
-        print('全部失败：image_key/xor 可能不对。用 `wxkey image-key` 重新派生，或确认是微信 4.x V2 图片。')
+        print('命中了文件但全部解密失败：image_key/xor 可能不对。'
+              '用 `wxkey image-key` 重新派生，或确认是微信 4.x V2 图片。')
         return
     make_sheets(a.out, manifest)
     print(f'索引拼图见 {a.out}/_sheets/，AI 逐张判读后写 keep.json，再用 sort_images.py 分拣。')

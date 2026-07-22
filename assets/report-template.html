@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{REPORT_TITLE}}</title>
+<meta name="description" content="{{REPORT_DESC}}">
+<!--
+  RFWG 报告模板 · 使用说明（给生成报告的 AI）：
+  1) 保留这套 CSS（专业、克制、人/AI 双友好），仅替换 {{...}} 占位与 <main> 内容。
+  2) 每个逻辑块用 <section id="..." data-section="..."> 包裹；data-section 用英文短名，便于 AI 抽取。
+  3) 有逻辑关系的内容做成 SVG，放进 <figure><svg viewBox=...></svg><figcaption>...</figcaption></figure>。
+     - SVG 用 viewBox 自适应宽度，width:100% 由 CSS 控制；文字用 <text>，避免外部字体依赖。
+     - 常用图型：管线图（矩形+箭头 marker）、对比表、能力卡片网格、时间线、光谱、韦恩图。
+  4) 关键结论用 <blockquote> 或 .callout(key/tip/warn) 突出；重要短语用 <mark>。
+  5) 事实性结论务必标注【来源 + 时间戳】，方便转引核验。
+  6) 生成后必须用浏览器渲染检查（见 SKILL.md「浏览器验收」）：无横向溢出、SVG 不越界、所有 section 可达。
+-->
+<style>
+  :root{--ink:#1b1b2b;--muted:#6b6b7b;--line:#e7e5e4;--bg:#faf9f7;--card:#fff;--indigo:#4f46e5;--indigo-soft:#eef2ff;--teal:#0d9488;--teal-soft:#e6fffb;--slate:#64748b;--slate-soft:#f1f5f9;--amber:#b45309;--amber-soft:#fef3c7;--rose:#be123c;--shadow:0 1px 3px rgba(20,20,40,.06),0 8px 24px rgba(20,20,40,.05)}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+  nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:28px 18px 40px;border-right:1px solid var(--line);background:#fff}
+  nav.toc .brand{font-weight:800;font-size:15px;margin-bottom:4px}.brand span{color:var(--indigo)}
+  nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;font-size:13.5px;padding:4px 10px;border-radius:7px;border-left:2px solid transparent}
+  nav.toc a:hover{background:var(--indigo-soft);color:var(--indigo)}
+  nav.toc a.lv2{padding-left:22px;font-size:12.5px}
+  nav.toc a.active{color:var(--indigo);border-left-color:var(--indigo);background:var(--indigo-soft)}
+  main{padding:46px 56px 120px;min-width:0}
+  header.hero{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--indigo);background:var(--indigo-soft);padding:4px 12px;border-radius:999px}
+  h1{font-family:Georgia,"Songti SC",serif;font-size:34px;line-height:1.25;margin:16px 0 8px}
+  .dek{font-size:16px;color:var(--muted);max-width:64ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:18px}
+  .chip{font-size:12.5px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;box-shadow:var(--shadow)}.chip b{color:var(--indigo)}
+  h2{font-family:Georgia,"Songti SC",serif;font-size:25px;margin:56px 0 6px;scroll-margin-top:20px}
+  h2 .num{color:var(--indigo);font-size:16px;font-weight:700;margin-right:10px;font-family:-apple-system,sans-serif}
+  h2::after{content:"";display:block;width:44px;height:3px;background:var(--indigo);border-radius:2px;margin-top:10px}
+  h3{font-size:18px;margin:32px 0 6px}h4{font-size:15px;margin:20px 0 4px}
+  p{margin:10px 0}.lead{font-size:17.5px;color:#2c2c40}
+  blockquote{margin:14px 0;padding:12px 18px;background:var(--indigo-soft);border-left:3px solid var(--indigo);border-radius:0 10px 10px 0;color:#33336a;font-size:15px}
+  code{background:#f4f4f5;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;color:#b91c1c}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);margin:16px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .callout{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14.5px}
+  .callout.tip{background:var(--teal-soft);border:1px solid #99f6e4}
+  .callout.warn{background:var(--amber-soft);border:1px solid #fcd34d;color:#7c4a03}
+  .callout.key{background:var(--indigo-soft);border:1px solid #c7d2fe}
+  .callout .t{font-weight:800;display:block;margin-bottom:4px}
+  figure{margin:24px 0}figure svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+  figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:8px}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f8f8f9;font-weight:700;font-size:12.5px;color:#3a3a4a}tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;font-weight:700}
+  .tag.sig{background:var(--teal-soft);color:var(--teal)}.tag.noise{background:var(--slate-soft);color:var(--slate)}
+  mark{background:#fef08a;padding:0 3px;border-radius:3px}
+  .ai-note{font-size:12px;color:var(--muted);font-style:italic}
+  .footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}nav.toc{display:none}main{padding:28px 20px 80px}.grid2{grid-template-columns:1fr}h1{font-size:27px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="目录">
+    <div class="brand"><span>RFWG</span> · 调研报告</div>
+    <div class="sub">{{REPORT_SUBTITLE}}</div>
+    <!-- {{TOC_LINKS}} : 每个 section 一条 <a href="#id">，二级用 class="lv2" -->
+  </nav>
+  <main>
+    <header class="hero">
+      <span class="kicker">{{KICKER}}</span>
+      <h1>{{REPORT_TITLE}}</h1>
+      <p class="dek">{{DEK}}</p>
+      <div class="meta"><!-- {{META_CHIPS}} : <span class="chip">标签 <b>值</b></span> --></div>
+    </header>
+    <!-- {{SECTIONS}} : 各 <section id data-section> 内容，逻辑块配 <figure><svg> -->
+  </main>
+</div>
+<script>
+const links=[...document.querySelectorAll('nav.toc a')];
+const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);if(a)a.classList.add('active');}});},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

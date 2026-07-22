@@ -19,15 +19,13 @@
 import argparse
 import os
 import glob
-import json
 import shutil
 import datetime
-import subprocess
-import hashlib
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from wxcommon import wechat_root, make_sheets, months_between  # noqa: E402
+from wxcommon import (wechat_root, room_md5, make_sheets,  # noqa: E402
+                      months_between, day_bounds, write_manifest)
 
 
 def main():
@@ -41,11 +39,10 @@ def main():
     a = ap.parse_args()
 
     root = wechat_root()
-    rmd5 = hashlib.md5(a.room.encode()).hexdigest()
-    start = datetime.date.fromisoformat(a.start)
+    lo, hi = day_bounds(a.start, a.end)              # 解析 + 校验时间范围（坏格式/顺序给清晰报错）
+    rmd5 = room_md5(a.room)
+    start = datetime.date.fromisoformat(a.start)     # 已由 day_bounds 校验过，安全
     end = datetime.date.fromisoformat(a.end)
-    lo = datetime.datetime.combine(start, datetime.time.min).timestamp()
-    hi = datetime.datetime.combine(end, datetime.time.max).timestamp()
 
     thumbs = []
     for ym in months_between(start, end):
@@ -64,13 +61,13 @@ def main():
     thumbs.sort()
     os.makedirs(a.out, exist_ok=True)
     manifest = []
-    for idx, (ts, seq, src) in enumerate(thumbs, 1):
+    for idx, (ts, _seq, src) in enumerate(thumbs, 1):
         dt = datetime.datetime.fromtimestamp(ts)
         name = f"{idx:03d}_{dt.strftime('%m%d_%H%M')}.jpg"
         shutil.copy2(src, os.path.join(a.out, name))
         # 只记相对文件名，不写含本机用户名/微信 account 的绝对 src 路径（避免单独分享 images/ 时泄漏本地信息）
         manifest.append({'idx': idx, 'time': dt.strftime('%Y-%m-%d %H:%M'), 'file': name})
-    json.dump(manifest, open(os.path.join(a.out, '_manifest.json'), 'w'), ensure_ascii=False, indent=1)
+    write_manifest(a.out, manifest)
     print(f'copied {len(manifest)} thumbnails -> {a.out}')
 
     if not manifest:

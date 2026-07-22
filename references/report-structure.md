@@ -17,7 +17,7 @@
 
 ## HTML 终稿（面向阅读）
 
-用 `assets/report-template.html` 为骨架。**推荐 section 顺序**（按需增减）：
+用 `$RFWG/assets/report-template.html` 为骨架。**推荐 section 顺序**（按需增减）：
 
 1. **执行摘要 / TL;DR**：一段话讲清主题结论 + 3~5 条要点 + 关键提醒。放最前，AI 可直接摘。
 2. **方法与数据来源**：数据规模、时间范围、采集管线（配管线 SVG）、诚实边界（取不到什么）。

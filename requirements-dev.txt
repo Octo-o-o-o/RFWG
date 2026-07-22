@@ -1,0 +1,4 @@
+# RFWG 开发 / CI 依赖（运行时依赖见 requirements.txt）
+-r requirements.txt
+pytest>=8
+ruff>=0.6

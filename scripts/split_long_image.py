@@ -23,7 +23,6 @@ downscale 到长边上限，**文字被糊掉读不清**。把它按上下切成
 import argparse
 import os
 import glob
-import sys
 
 EXTS = ('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif')
 
@@ -45,7 +44,8 @@ def gather(inp):
 
 def split_one(path, outdir, max_aspect, slice_height, slice_aspect, overlap, min_width, fmt, force):
     from PIL import Image
-    im = Image.open(path).convert('RGB')
+    with Image.open(path) as _im:      # with 确保源文件句柄及时释放（Windows 才能后续移动/删除）
+        im = _im.convert('RGB')
     w, h = im.size
     stem = os.path.splitext(os.path.basename(path))[0]
 
@@ -99,7 +99,8 @@ def main():
     try:
         import PIL  # noqa: F401
     except ImportError:
-        raise SystemExit('需要 Pillow：pip3 install -r requirements.txt（或 --break-system-packages pillow）。')
+        raise SystemExit('需要 Pillow：pip3 install -r requirements.txt'
+                         '（或 --break-system-packages pillow）。') from None
 
     imgs = gather(a.inp)
     if not imgs:

@@ -18,9 +18,9 @@
 `--keep-db` 会保留该全员明文库，仅供调试，正常使用切勿开启。
 """
 import argparse
+import contextlib
 import os
 import json
-import struct
 import re
 import html
 import datetime
@@ -28,13 +28,14 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from wxcommon import wechat_config, load_keys  # noqa: E402
+from wxcommon import wechat_config, load_keys, day_bounds  # noqa: E402
 
 
 def decrypt_sqlcipher(src, key, hmac_len=64, page=4096):
     """WeChat 4.x：每页 = [salt(仅第1页16B)] + AES-256-CBC 密文 + reserve(iv+hmac)。返回明文 bytes。"""
     from Crypto.Cipher import AES
-    data = open(src, 'rb').read()
+    with open(src, 'rb') as f:
+        data = f.read()
     reserve = 16 + hmac_len
     if reserve % 16:
         reserve = ((reserve // 16) + 1) * 16
@@ -65,6 +66,7 @@ def main():
     ap.add_argument('--keep-db', action='store_true',
                     help='[危险] 保留完整解密库（含所有联系人朋友圈明文），仅供调试；默认用完即删')
     a = ap.parse_args()
+    lo, hi = day_bounds(a.start, a.end)      # 先校验时间范围（坏格式/顺序即时报错，不白解密）
 
     db_dir = wechat_config()['db_dir']
     src = os.path.join(db_dir, 'sns', 'sns.db')
@@ -83,20 +85,25 @@ def main():
         ok = False
         for hl in (64, 20, 32):
             try:
-                open(tmp, 'wb').write(decrypt_sqlcipher(src, key, hmac_len=hl))
+                with open(tmp, 'wb') as f:
+                    f.write(decrypt_sqlcipher(src, key, hmac_len=hl))
+                with contextlib.suppress(OSError):
+                    os.chmod(tmp, 0o600)     # 临时明文库（含他人隐私）仅本人可读；Windows 上无害
                 con = sqlite3.connect(tmp)
-                con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchone()
-                con.close()
+                try:
+                    con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchone()
+                finally:
+                    con.close()              # 先关句柄，Windows 才能删除临时文件
                 ok = True
                 break
-            except Exception:
+            except sqlite3.DatabaseError:
+                # 只吞"不是有效数据库"（HMAC 变体不对）；IO/依赖等真错误照常抛出，避免误导诊断
                 if os.path.exists(tmp):
-                    os.remove(tmp)
+                    with contextlib.suppress(OSError):
+                        os.remove(tmp)
         if not ok:
             raise SystemExit('sns.db 解密失败（HMAC 变体都不匹配）。')
 
-        lo = datetime.datetime.combine(datetime.date.fromisoformat(a.start), datetime.time.min).timestamp()
-        hi = datetime.datetime.combine(datetime.date.fromisoformat(a.end), datetime.time.max).timestamp()
         con = sqlite3.connect(tmp)
         try:
             rows = con.execute("SELECT tid,content FROM SnsTimeLine WHERE user_name=?", (a.user,)).fetchall()
@@ -126,7 +133,8 @@ def main():
                           'link_url': html.unescape(g(r'<contentUrl>(.*?)</contentUrl>', c)),
                           'medias': medias})
         items.sort(key=lambda x: x['ts'])
-        json.dump(items, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        with open(a.out, 'w', encoding='utf-8') as f:
+            json.dump(items, f, ensure_ascii=False, indent=1)
     finally:
         # 任何退出路径都清理含他人隐私的完整解密库
         if not a.keep_db and os.path.exists(tmp):

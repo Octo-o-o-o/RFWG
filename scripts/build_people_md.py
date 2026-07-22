@@ -38,7 +38,8 @@ def dump(name, rows, out_path, title_suffix):
             cur = p['date']
             L += ['', f"## {cur}（周{weekday_cn(cur)}）", '']
         L.append(render(p))
-    open(out_path, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(L) + '\n')
 
 
 def main():

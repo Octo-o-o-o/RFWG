@@ -12,7 +12,7 @@ import re
 import json
 import html
 import hashlib
-import glob
+import datetime
 
 HOME = os.path.expanduser("~")
 
@@ -37,9 +37,11 @@ def wechat_config():
     """读取 wechat-cli 的 config.json（多候选 + RFWG_CONFIG 覆盖）。"""
     for p in _candidates("config.json", "RFWG_CONFIG"):
         if os.path.exists(p):
-            return json.load(open(p, encoding="utf-8"))
-    raise SystemExit("未找到 wechat-cli config.json（找过 ~/.wechat-cli/、%LOCALAPPDATA%\\wechat-cli\\ 等）。"
-                     "先按 references/toolchain-setup.md 装好 wechat-cli 并提取密钥；或设 RFWG_DB_DIR 指向 db_storage。")
+            with open(p, encoding="utf-8") as f:
+                return json.load(f)
+    raise SystemExit("未找到 wechat-cli config.json（找过 ~/.wechat-cli/、"
+                     "%LOCALAPPDATA%\\wechat-cli\\ 等）。先按 references/toolchain-setup.md "
+                     "装好 wechat-cli 并提取密钥；或设 RFWG_DB_DIR 指向 db_storage。")
 
 
 def wechat_root():
@@ -57,7 +59,8 @@ def load_keys():
     """返回数据库密钥 all_keys.json（键形如 'sns/sns.db' -> {'enc_key': hex}）；多候选 + RFWG_KEYS 覆盖。"""
     for p in _candidates("all_keys.json", "RFWG_KEYS"):
         if os.path.exists(p):
-            return json.load(open(p, encoding="utf-8"))
+            with open(p, encoding="utf-8") as f:
+                return json.load(f)
     raise SystemExit("未找到 all_keys.json（数据库密钥）。macOS：`wechat-cli init`；"
                      "Windows：用社区内存扫描器提取（见 references/toolchain-setup.md 的 Windows 一节）。")
 
@@ -123,12 +126,13 @@ def parse_line(msg):
 
 def load_messages(raw_json_path):
     """读取 wechat-cli --format json 的导出，返回 messages 列表（字符串）。"""
-    d = json.load(open(raw_json_path, encoding="utf-8"))
+    with open(raw_json_path, encoding="utf-8") as f:
+        d = json.load(f)
     return d.get("messages", []), d
 
 
 MEDIA_ONLY = re.compile(
-    r'^(\[图片\]|\[表情\]|\[语音\]|\[视频\]|\[卡片\]|\[文件\]|\[链接\]|\[链接/文件\]|\[位置\]|\[撤回消息\].*)( \(local_id=\d+\))?$')
+    r'^(\[图片\]|\[表情\]|\[语音\]|\[视频\]|\[卡片\]|\[文件\]|\[链接\]|\[链接/文件\]|\[位置\]|\[撤回消息\].*)( \(local_id=\d+\))?$')  # noqa: E501
 _TRIVIAL = {'哈哈', '哈哈哈', '哈哈哈哈', '对的', '是的', '好的', '可以', '牛', '强', '厉害', '这样',
             '收到', '嗯嗯', '对啊', '？？？', '。。。', '哦哦', '好家伙', '同意', '摸', '蹲',
             '学习了', '感谢', '谢谢'}
@@ -137,13 +141,10 @@ _TRIVIAL = {'哈哈', '哈哈哈', '哈哈哈哈', '对的', '是的', '好的',
 def is_substantive(p):
     """粗过滤：去掉纯媒体占位与极短应答/语气词，保留有信息量的发言。"""
     c = re.sub(r'\s*\(local_id=\d+\)', '', (p['content'] or '').strip())
-    if MEDIA_ONLY.match(c) or len(c) <= 3 or c in _TRIVIAL:
-        return False
-    return True
+    return not (MEDIA_ONLY.match(c) or len(c) <= 3 or c in _TRIVIAL)
 
 
 def weekday_cn(datestr):
-    import datetime
     try:
         return ['一', '二', '三', '四', '五', '六', '日'][datetime.date.fromisoformat(datestr).weekday()]
     except (ValueError, TypeError):
@@ -154,10 +155,9 @@ IMG_RE = re.compile(r'^\[图片\]')
 
 
 def _dt(p):
-    import datetime
     try:
         return datetime.datetime.fromisoformat(p['date'] + ' ' + p['time'])
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 
@@ -191,16 +191,15 @@ def group_consecutive(parsed, max_gap_min=2, max_block=12):
 
 def load_image_index(images_dir):
     """读 images/_manifest.json，返回 {'YYYY-MM-DD HH:MM': [缩略图文件名,...]}，用于给 [图片] 贴图。"""
-    import json
-    import os
     idx = {}
     if not images_dir:
         return idx
     mf = os.path.join(images_dir, '_manifest.json')
     if not os.path.exists(mf):
         return idx
-    for m in json.load(open(mf, encoding='utf-8')):
-        idx.setdefault(m['time'], []).append(m['file'])
+    with open(mf, encoding='utf-8') as f:
+        for m in json.load(f):
+            idx.setdefault(m['time'], []).append(m['file'])
     return idx
 
 
@@ -215,6 +214,35 @@ def months_between(start, end):
             m = 1
             y += 1
     return out
+
+
+def day_bounds(start, end, required=True):
+    """把 'YYYY-MM-DD' 的 start/end 解析成当天 [00:00:00, 23:59:59] 的时间戳 (lo, hi)。
+    - start 与 end 都为空且 required=False 时返回 (None, None)（用于无时间过滤的目录模式）。
+    - 格式非法或 start>end 时以清晰的 SystemExit 报错（而非裸 traceback），便于 AI 诊断。"""
+    if not start and not end:
+        if required:
+            raise SystemExit('缺少时间范围：需要 --start 与 --end（格式 YYYY-MM-DD）。')
+        return None, None
+    if not (start and end):
+        raise SystemExit('--start 与 --end 需同时提供（格式 YYYY-MM-DD）。')
+    try:
+        s = datetime.date.fromisoformat(start)
+        e = datetime.date.fromisoformat(end)
+    except ValueError:
+        raise SystemExit(f'--start/--end 需为零填充的 YYYY-MM-DD（如 2026-06-01）；'
+                         f'收到 start={start!r}, end={end!r}。') from None
+    if s > e:
+        raise SystemExit(f'--start（{start}）不能晚于 --end（{end}）。')
+    lo = datetime.datetime.combine(s, datetime.time.min).timestamp()
+    hi = datetime.datetime.combine(e, datetime.time.max).timestamp()
+    return lo, hi
+
+
+def write_manifest(out_dir, manifest):
+    """统一写 _manifest.json：只含相对文件名（绝不写含本机用户名的绝对路径），UTF-8。"""
+    with open(os.path.join(out_dir, '_manifest.json'), 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=1)
 
 
 # ---- 索引拼图（收图 collect_images 与全量解图 decrypt_images_v2 共用）----

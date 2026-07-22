@@ -1,0 +1,11 @@
+# RFWG 开发工具配置（lint / 测试）。运行时依赖见 requirements.txt。
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "SIM"]
+ignore = ["E402"]   # 脚本先 sys.path.insert 再 import wxcommon，属有意为之
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
