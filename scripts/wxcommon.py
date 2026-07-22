@@ -16,27 +16,50 @@ import glob
 
 HOME = os.path.expanduser("~")
 
-# ---- 微信本地根目录自动探测（macOS 微信 4.x）----
+
+# ---- 微信本地根目录自动探测（macOS + Windows 微信 4.x）----
+def _candidates(filename, env):
+    """config.json / all_keys.json 的候选位置（跨平台）。env 变量优先。"""
+    out = []
+    e = os.environ.get(env)
+    if e:
+        out.append(e)
+    out.append(os.path.join(HOME, ".wechat-cli", filename))              # macOS Family A / 社区工具
+    la = os.environ.get("LOCALAPPDATA")
+    if la:
+        out.append(os.path.join(la, "wechat-cli", filename))            # Windows r266 安装位
+    out.append(os.path.join(HOME, ".config", "wxcli", filename))         # r266 macOS
+    out.append(os.path.join(HOME, ".config", "wechat-cli", filename))
+    return out
+
+
 def wechat_config():
-    """读取 wechat-cli 的 config.json，返回 db_dir。"""
-    p = os.path.join(HOME, ".wechat-cli", "config.json")
-    if not os.path.exists(p):
-        raise SystemExit("未找到 ~/.wechat-cli/config.json，请先运行 `wechat-cli init`。")
-    return json.load(open(p, encoding="utf-8"))
+    """读取 wechat-cli 的 config.json（多候选 + RFWG_CONFIG 覆盖）。"""
+    for p in _candidates("config.json", "RFWG_CONFIG"):
+        if os.path.exists(p):
+            return json.load(open(p, encoding="utf-8"))
+    raise SystemExit("未找到 wechat-cli config.json（找过 ~/.wechat-cli/、%LOCALAPPDATA%\\wechat-cli\\ 等）。"
+                     "先按 references/toolchain-setup.md 装好 wechat-cli 并提取密钥；或设 RFWG_DB_DIR 指向 db_storage。")
 
 
 def wechat_root():
-    """由 db_dir 反推 xwechat_files/<account> 根（db_storage 的上一级）。"""
-    db_dir = wechat_config()["db_dir"]              # .../<account>/db_storage
+    """返回 xwechat_files/<account> 根（db_storage 的上一级）。可用 RFWG_DB_DIR 直接指定 db_storage。"""
+    db = os.environ.get("RFWG_DB_DIR")
+    if db:
+        return os.path.dirname(db.rstrip("/\\"))
+    db_dir = wechat_config().get("db_dir")             # .../<account>/db_storage
+    if not db_dir:
+        raise SystemExit("config.json 里没有 db_dir。设 RFWG_DB_DIR 指向 .../xwechat_files/<账号>/db_storage。")
     return os.path.dirname(db_dir)
 
 
 def load_keys():
-    """返回 all_keys.json（键形如 'sns/sns.db' -> {'enc_key': hex}）。"""
-    p = os.path.join(HOME, ".wechat-cli", "all_keys.json")
-    if not os.path.exists(p):
-        raise SystemExit("未找到 ~/.wechat-cli/all_keys.json，请先运行 `wechat-cli init`。")
-    return json.load(open(p, encoding="utf-8"))
+    """返回数据库密钥 all_keys.json（键形如 'sns/sns.db' -> {'enc_key': hex}）；多候选 + RFWG_KEYS 覆盖。"""
+    for p in _candidates("all_keys.json", "RFWG_KEYS"):
+        if os.path.exists(p):
+            return json.load(open(p, encoding="utf-8"))
+    raise SystemExit("未找到 all_keys.json（数据库密钥）。macOS：`wechat-cli init`；"
+                     "Windows：用社区内存扫描器提取（见 references/toolchain-setup.md 的 Windows 一节）。")
 
 
 def room_md5(username):
@@ -197,9 +220,12 @@ def months_between(start, end):
 # ---- 索引拼图（收图 collect_images 与全量解图 decrypt_images_v2 共用）----
 def _font(size):
     from PIL import ImageFont
-    for p in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+    for p in ['/System/Library/Fonts/Supplemental/Arial Unicode.ttf',   # macOS
               '/System/Library/Fonts/PingFang.ttc',
-              '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
+              r'C:\Windows\Fonts\msyh.ttc',                              # Windows 微软雅黑
+              r'C:\Windows\Fonts\segoeui.ttf',
+              r'C:\Windows\Fonts\arial.ttf',
+              '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:        # Linux
         if os.path.exists(p):
             try:
                 return ImageFont.truetype(p, size)

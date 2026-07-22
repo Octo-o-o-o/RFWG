@@ -131,10 +131,14 @@ def discover_keys(cli_key, cli_xor):
     xor = cli_xor if cli_xor is not None else os.environ.get('RFWG_IMG_XOR')
     if aes and xor is not None:
         return aes, parse_xor(xor)
-    for cfg in [os.path.join(home, '.config', 'wxcli', 'config.json'),
-                os.path.join(home, '.wechat-cli', 'all_keys.json'),
-                os.path.join(home, '.wechat-cli', 'config.json'),
-                os.path.join(home, '.config', 'wechat-cli', 'config.json')]:
+    cands = [os.path.join(home, '.config', 'wxcli', 'config.json'),
+             os.path.join(home, '.wechat-cli', 'all_keys.json'),
+             os.path.join(home, '.wechat-cli', 'config.json'),
+             os.path.join(home, '.config', 'wechat-cli', 'config.json')]
+    la = os.environ.get('LOCALAPPDATA')
+    if la:
+        cands.append(os.path.join(la, 'wechat-cli', 'config.json'))     # Windows
+    for cfg in cands:
         if not os.path.exists(cfg):
             continue
         try:

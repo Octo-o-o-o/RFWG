@@ -19,27 +19,41 @@
 
 > 完整案例：本 skill 从一次真实调研沉淀而来——某技术群一个月约 1.5 万条消息、一百多张图、某成员数十条朋友圈，围绕一个新概念生成了带多张 SVG 的 HTML 报告（案例细节已脱敏，不含真实身份）。
 
-## 平台
+## 平台（macOS 与 Windows 双轨）
 
-**仅 macOS + 微信 4.x**（脚本按 macOS 本地布局与 `wxkey` 授权链路编写）。Windows/Linux 未测试——Windows 走向见 `references/toolchain-setup.md` §0。
+底层数据（SQLCipher 库、文件布局、V2 图片格式）与所有解密/图片/切图脚本**全平台通用**；差异只在"装哪个工具、怎么取密钥、数据路径"。**完整分轨见 [`references/toolchain-setup.md`](references/toolchain-setup.md)。**
+
+| | macOS（arm64）| Windows（amd64）|
+|---|---|---|
+| 微信 | 4.x | 微信/Weixin 4.x |
+| 取密钥 | `wxkey` 走 shadow WeChat + 一次性 sudo（不关 SIP）| 直接扫 `Weixin.exe` 进程内存（**需管理员**，无 SIP）|
+| 文字导出 CLI | `@canghe_ai/wechat-cli`（`history`，**macOS 独占**）| `r266-tech/wechat-cli`（`timeline/export`）或社区 wechat-decrypt |
+| 图片密钥 | `wxkey image-key` | 社区内存扫描器（`find_image_key.py` 等）|
+| 数据根 | `~/Library/Containers/.../xwechat_files/<account>/` | `%USERPROFILE%\Documents\xwechat_files\<wxid>\` |
+| RFWG 图片/解密/切图脚本 | ✅ 已测 | ✅ 跨平台（设 `RFWG_DB_DIR`/`RFWG_KEYS` 即可）|
+| RFWG 文字管线 | ✅ 直接可用 | ⚠️ 需把导出映射成 raw.json 契约（一段脚本，见 toolchain-setup §3.4）|
+
+> **状态**：macOS 已端到端验证；Windows 逻辑与路径可移植但未在真机跑过端到端，首次请按 toolchain-setup §7 自校验。**Linux** 未适配。
 
 ## 依赖（照抄即可，AI 不用再调研）
 
 完整安装、密钥落盘位置、故障排查、已测/未测边界都固化在 **[`references/toolchain-setup.md`](references/toolchain-setup.md)**。速览：
 
-- **`wechat-cli`**（文字/联系人/会话/数据库密钥/缩略图，**必需**）：
-  ```bash
-  npm i -g @canghe_ai/wechat-cli      # 需 Node ≥14；仓库 freestylefly/wechat-cli，Apache-2.0
-  wechat-cli init                     # macOS 首次一次性授权，提取数据库密钥到 ~/.wechat-cli/all_keys.json
-  ```
-- **Python 依赖**（`pycryptodome` + `pillow`）：
+- **Python 依赖**（两平台相同，`pycryptodome` + `pillow`）：
   ```bash
   pip3 install -r requirements.txt    # externally-managed 报错时加 --break-system-packages
   ```
-- **`wxkey`**（**仅当要全量原图**才需要——派生图片密钥 `image_key`/`image_xor_key`）：
+- **wechat-cli（读微信本地数据 + 数据库密钥，必需）**：
   ```bash
-  go install github.com/r266-tech/wxkey/cmd/wxkey@latest   # 需 Go≥1.21；或用 wechat-cli release zip 内置版
-  wxkey bootstrap && wxkey image-key                       # 一次性 sudo；只要文字/缩略图则跳过
+  # macOS：npm 版（预编译 darwin-arm64，Apple Silicon 独占）
+  npm i -g @canghe_ai/wechat-cli && wechat-cli init      # 提取数据库密钥到 ~/.wechat-cli/all_keys.json
+  # Windows：npm 版无 Windows 构建 → 用 r266-tech/wechat-cli 或社区 wechat-decrypt，见 toolchain-setup §3
+  ```
+- **图片密钥（仅当要全量原图）**：
+  ```bash
+  # macOS：wxkey（需 Go≥1.21，或用 release zip 内置版）
+  go install github.com/r266-tech/wxkey/cmd/wxkey@latest && wxkey bootstrap && wxkey image-key
+  # Windows：社区内存扫描器（管理员运行），把 image_key/xor 传给 RFWG_IMG_KEY/RFWG_IMG_XOR
   ```
 - **读图 + 浏览器验收**：AI 侧读图能力 + Playwright（或本机 Chrome 无头）。
 

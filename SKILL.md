@@ -28,7 +28,7 @@ python3 -c "import Crypto,PIL"        # 缺则：pip3 install -r "$RFWG/requirem
 - **要全量原图才需要的额外一步**：`all_keys.json` 无图片密钥；解 V2 原图前先装 `wxkey` 并 `wxkey bootstrap && wxkey image-key` 取 `image_key/image_xor_key`（见第 5 步与 toolchain-setup §2）。**只要文字/缩略图就不用装 wxkey。**
 - **Python 依赖**：`pip3 install -r "$RFWG/requirements.txt"`（`pycryptodome`+`pillow`）；pip 报 externally-managed 时加 `--break-system-packages`，或用虚拟环境 `python3 -m venv ~/.rfwg-venv`（后续用 `~/.rfwg-venv/bin/python3` 跑脚本）。
 - **浏览器验收**：指 AI 环境自带的浏览器工具（如 playwright MCP）；没有就走第 8 步的本机无头 Chrome 方案。
-- **仅 macOS + 微信 4.x**：Windows/Linux 未测（Windows 走向见 toolchain-setup §0）。
+- **平台**：macOS(arm64) 已端到端验证；**Windows(amd64) 也可用**——底层数据/解密/图片脚本跨平台，差异只在"装哪个工具、怎么取密钥、数据路径"，且**文字导出需一次格式映射**（`history` 那套 CLI 是 macOS 独占）。**Windows 用户按 `references/toolchain-setup.md` §3 走**（设 `RFWG_DB_DIR`/`RFWG_KEYS`，用社区内存扫描器取密钥，文字按 §3.4 映射成 raw.json）。Linux 未适配。
 
 数据结构与解密细节见 `references/wechat-local-data.md`（需要时再读）。
 
